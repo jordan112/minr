@@ -75,7 +75,26 @@ export class PlayerModel {
     rightArmMesh.position.y = -0.35;
     const rightForearm = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.2, 0.24), skin);
     rightForearm.position.y = -0.55;
-    this.rightArm.add(rightArmMesh, rightForearm);
+
+    // Pickaxe in right hand
+    const handleMat = new THREE.MeshLambertMaterial({ color: 0x6b4226 }); // wood
+    const headMat = new THREE.MeshLambertMaterial({ color: 0x888888 }); // iron
+
+    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.6, 0.06), handleMat);
+    handle.position.set(0, -0.7, 0.15);
+    handle.rotation.x = -0.3;
+
+    const pickHead = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.08, 0.06), headMat);
+    pickHead.position.set(0, -0.42, 0.22);
+    pickHead.rotation.x = -0.3;
+
+    // Pick point (tapers)
+    const pickPoint = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.06, 0.06), headMat);
+    pickPoint.position.set(0.2, -0.42, 0.22);
+    pickPoint.rotation.x = -0.3;
+    pickPoint.rotation.z = -0.2;
+
+    this.rightArm.add(rightArmMesh, rightForearm, handle, pickHead, pickPoint);
     this.group.add(this.rightArm);
 
     // Legs — pivot from hip

@@ -9,22 +9,59 @@ export class SoundManager {
   private sfxGain!: GainNode;
   private musicPlaying = false;
   private footstepCooldown = 0;
+  private initialized = false;
 
-  private ensureContext(): AudioContext {
-    if (!this.ctx) {
-      this.ctx = new AudioContext();
-      this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.value = 0.5;
-      this.masterGain.connect(this.ctx.destination);
+  constructor() {
+    // Safari requires AudioContext creation inside a user gesture.
+    // Listen on multiple events to catch the first interaction.
+    const initOnGesture = () => {
+      if (this.initialized) return;
+      this.initContext();
+      document.removeEventListener("click", initOnGesture, true);
+      document.removeEventListener("touchstart", initOnGesture, true);
+      document.removeEventListener("keydown", initOnGesture, true);
+    };
+    document.addEventListener("click", initOnGesture, true);
+    document.addEventListener("touchstart", initOnGesture, true);
+    document.addEventListener("keydown", initOnGesture, true);
+  }
 
-      this.musicGain = this.ctx.createGain();
-      this.musicGain.gain.value = 0.3;
-      this.musicGain.connect(this.masterGain);
+  /** Create AudioContext directly inside a user gesture for Safari compatibility */
+  private initContext(): void {
+    if (this.initialized) return;
+    this.initialized = true;
 
-      this.sfxGain = this.ctx.createGain();
-      this.sfxGain.gain.value = 0.6;
-      this.sfxGain.connect(this.masterGain);
+    // Safari: try webkitAudioContext fallback
+    const AC = window.AudioContext || (window as any).webkitAudioContext;
+    this.ctx = new AC();
+
+    this.masterGain = this.ctx.createGain();
+    this.masterGain.gain.value = 0.5;
+    this.masterGain.connect(this.ctx.destination);
+
+    this.musicGain = this.ctx.createGain();
+    this.musicGain.gain.value = 0.3;
+    this.musicGain.connect(this.masterGain);
+
+    this.sfxGain = this.ctx.createGain();
+    this.sfxGain.gain.value = 0.6;
+    this.sfxGain.connect(this.masterGain);
+
+    // Immediately resume in case Safari suspended it
+    if (this.ctx.state === "suspended") {
+      this.ctx.resume();
     }
+
+    // Play a silent buffer to fully unlock audio on Safari/iOS
+    const silentBuf = this.ctx.createBuffer(1, 1, this.ctx.sampleRate);
+    const src = this.ctx.createBufferSource();
+    src.buffer = silentBuf;
+    src.connect(this.ctx.destination);
+    src.start(0);
+  }
+
+  private ensureContext(): AudioContext | null {
+    if (!this.ctx) return null;
     if (this.ctx.state === "suspended") {
       this.ctx.resume();
     }
@@ -35,6 +72,7 @@ export class SoundManager {
 
   playBlockBreak(): void {
     const ctx = this.ensureContext();
+    if (!ctx) return;
     const now = ctx.currentTime;
 
     // Crunchy noise burst
@@ -65,6 +103,7 @@ export class SoundManager {
 
   playBlockPlace(): void {
     const ctx = this.ensureContext();
+    if (!ctx) return;
     const now = ctx.currentTime;
 
     // Thud + click
@@ -99,6 +138,7 @@ export class SoundManager {
 
   playFootstep(): void {
     const ctx = this.ensureContext();
+    if (!ctx) return;
     const now = ctx.currentTime;
 
     // Soft thump with slight pitch variation
@@ -140,6 +180,7 @@ export class SoundManager {
 
   playJump(): void {
     const ctx = this.ensureContext();
+    if (!ctx) return;
     const now = ctx.currentTime;
 
     const osc = ctx.createOscillator();
@@ -184,6 +225,7 @@ export class SoundManager {
   private playAmbientLoop(): void {
     if (!this.musicPlaying) return;
     const ctx = this.ensureContext();
+    if (!ctx) return;
     const now = ctx.currentTime;
 
     // Calm ambient: layered slow pads with pentatonic notes

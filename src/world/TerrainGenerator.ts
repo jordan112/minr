@@ -31,24 +31,36 @@ export class TerrainGenerator {
         const wx = worldX + x;
         const wz = worldZ + z;
 
-        // Multi-octave noise for height
+        // Multi-octave noise for height — gentle rolling hills
         const height = Math.floor(
           SEA_LEVEL +
-          this.noise2D(wx / 120, wz / 120) * 20 +
-          this.noise2D(wx / 60, wz / 60) * 10 +
-          this.noise2D(wx / 30, wz / 30) * 5
+          this.noise2D(wx / 200, wz / 200) * 8 +
+          this.noise2D(wx / 80, wz / 80) * 4 +
+          this.noise2D(wx / 40, wz / 40) * 2
         );
 
         const clampedHeight = Math.max(1, Math.min(WORLD_HEIGHT - 1, height));
 
-        for (let y = 0; y <= clampedHeight; y++) {
+        // Water level for ponds/lakes
+        const waterLevel = SEA_LEVEL - 1;
+
+        for (let y = 0; y <= Math.max(clampedHeight, waterLevel); y++) {
           if (y === 0) {
             chunk.setBlock(x, y, z, BlockId.BEDROCK);
+          } else if (y > clampedHeight && y <= waterLevel) {
+            // Water fills depressions
+            chunk.setBlock(x, y, z, BlockId.WATER);
+          } else if (y === clampedHeight && clampedHeight <= waterLevel) {
+            // Sand at bottom of water and shoreline
+            chunk.setBlock(x, y, z, BlockId.SAND);
+          } else if (y === clampedHeight && clampedHeight <= waterLevel + 1) {
+            // Sand at shoreline
+            chunk.setBlock(x, y, z, BlockId.SAND);
           } else if (y === clampedHeight) {
-            chunk.setBlock(x, y, z, clampedHeight <= SEA_LEVEL - 2 ? BlockId.SAND : BlockId.GRASS);
-          } else if (y > clampedHeight - 4) {
+            chunk.setBlock(x, y, z, BlockId.GRASS);
+          } else if (y > clampedHeight - 4 && y < clampedHeight) {
             chunk.setBlock(x, y, z, BlockId.DIRT);
-          } else {
+          } else if (y <= clampedHeight) {
             chunk.setBlock(x, y, z, BlockId.STONE);
           }
         }

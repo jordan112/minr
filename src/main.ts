@@ -10,6 +10,7 @@ import { HUD } from "./ui/HUD";
 import { BlockId, PLACEABLE_BLOCKS } from "./world/BlockType";
 import { PLAYER_HEIGHT } from "./utils/constants";
 import { SoundManager } from "./audio/SoundManager";
+import { AnimalManager } from "./entities/AnimalManager";
 
 // --- Init ---
 const canvas = document.getElementById("game") as HTMLCanvasElement;
@@ -22,6 +23,7 @@ const controller = new PlayerController(player, sceneManager.camera, input, worl
 const raycaster = new VoxelRaycaster(world, sceneManager.scene);
 const hud = new HUD();
 const sound = new SoundManager();
+const animals = new AnimalManager(sceneManager.scene, world);
 
 // Block selection
 hud.onBlockSelect = (index) => {
@@ -66,6 +68,9 @@ function gameLoop(now: number) {
   const rayOrigin = controller.getRayOrigin();
   const lookDir = controller.getLookDirection();
   raycaster.update(rayOrigin, lookDir);
+
+  // Update animals
+  animals.update(dt, player.position.x, player.position.z);
 
   // Sound: footsteps and jump
   sound.updateFootsteps(dt, controller.isMoving, player.isGrounded);
