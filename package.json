@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "bun index.html",
-    "build": "bun build src/main.ts --outdir=dist --minify"
+    "build": "bun run build.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",

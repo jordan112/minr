@@ -12,6 +12,7 @@ import { PLAYER_HEIGHT } from "./utils/constants";
 import { SoundManager } from "./audio/SoundManager";
 import { AnimalManager } from "./entities/AnimalManager";
 import { ToolType, ALL_TOOLS, getToolDef } from "./player/ToolSystem";
+import { AquaticManager } from "./entities/AquaticManager";
 
 // --- Init ---
 const canvas = document.getElementById("game") as HTMLCanvasElement;
@@ -25,6 +26,7 @@ const raycaster = new VoxelRaycaster(world, sceneManager.scene);
 const hud = new HUD();
 const sound = new SoundManager();
 const animals = new AnimalManager(sceneManager.scene, world);
+const aquatics = new AquaticManager(sceneManager.scene, world);
 
 // Block selection
 hud.onBlockSelect = (index) => {
@@ -100,8 +102,9 @@ function gameLoop(now: number) {
   const lookDir = controller.getLookDirection();
   raycaster.update(rayOrigin, lookDir);
 
-  // Update animals
+  // Update animals and aquatic creatures
   animals.update(dt, player.position.x, player.position.z);
+  aquatics.update(dt, player.position.x, player.position.z);
 
   // Player-animal collision (push player away from animals)
   for (const animal of animals.getAnimals()) {
@@ -133,8 +136,17 @@ function gameLoop(now: number) {
       attackPoint.x, attackPoint.y, attackPoint.z, 2.5
     );
 
+    // Also check aquatic creatures
+    const aquaticTarget = aquatics.findNearestInRange(
+      attackPoint.x, attackPoint.y, attackPoint.z, 2.5
+    );
+
     if (target) {
       target.takeDamage(toolDef.damage);
+      controller.playerModel.triggerSwing();
+      sound.playBlockBreak();
+    } else if (aquaticTarget) {
+      aquaticTarget.takeDamage(toolDef.damage);
       controller.playerModel.triggerSwing();
       sound.playBlockBreak();
     } else if (raycaster.lastHit) {
