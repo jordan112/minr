@@ -76,6 +76,9 @@ export class TerrainGenerator {
       }
     }
 
+    // Lava pools (rare, small)
+    this.generateLava(chunk, worldX, worldZ);
+
     // Tree pass
     this.generateTrees(chunk, worldX, worldZ);
   }
@@ -123,6 +126,32 @@ export class TerrainGenerator {
               if (chunk.getBlock(lx, ly, lz) === BlockId.AIR) {
                 chunk.setBlock(lx, ly, lz, BlockId.LEAVES);
               }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private generateLava(chunk: Chunk, worldX: number, worldZ: number): void {
+    // Small lava pools on the surface — rare
+    for (let x = 2; x < CHUNK_SIZE - 2; x++) {
+      for (let z = 2; z < CHUNK_SIZE - 2; z++) {
+        const wx = worldX + x;
+        const wz = worldZ + z;
+
+        const lavaNoise = this.noise2D(wx / 20 + 1000, wz / 20 + 1000);
+        if (lavaNoise > 0.75) {
+          // Find surface
+          for (let y = WORLD_HEIGHT - 1; y >= 1; y--) {
+            const block = chunk.getBlock(x, y, z);
+            if (block === BlockId.GRASS || block === BlockId.DIRT || block === BlockId.STONE) {
+              // Replace with lava pool (1-2 blocks deep)
+              chunk.setBlock(x, y, z, BlockId.LAVA);
+              if (chunk.getBlock(x, y - 1, z) === BlockId.DIRT || chunk.getBlock(x, y - 1, z) === BlockId.STONE) {
+                chunk.setBlock(x, y - 1, z, BlockId.LAVA);
+              }
+              break;
             }
           }
         }

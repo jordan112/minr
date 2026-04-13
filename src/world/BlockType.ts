@@ -8,6 +8,9 @@ export enum BlockId {
   SAND = 6,
   WATER = 7,
   BEDROCK = 8,
+  LAVA = 9,
+  TORCH = 10,
+  TNT = 11,
 }
 
 export interface BlockDef {
@@ -55,6 +58,9 @@ def(BlockId.LEAVES, "Leaves", { top: "#2d6b1e", bottom: "#2d6b1e", side: "#2d6b1
 def(BlockId.SAND, "Sand", { top: "#d4c484", bottom: "#d4c484", side: "#d4c484" }, {}, 1, 0);
 def(BlockId.WATER, "Water", { top: "#3060c0", bottom: "#3060c0", side: "#3060c0" }, { isSolid: false, isTransparent: true }, 1, 3);
 def(BlockId.BEDROCK, "Bedrock", { top: "#3a3a3a", bottom: "#3a3a3a", side: "#3a3a3a" }, {}, 1, 6);
+def(BlockId.LAVA, "Lava", { top: "#ff4400", bottom: "#cc2200", side: "#ee3300" }, { isSolid: false, isTransparent: true }, 1, 9);
+def(BlockId.TORCH, "Torch", { top: "#ffdd44", bottom: "#6b4226", side: "#6b4226" }, { isTransparent: true }, 1, 12);
+def(BlockId.TNT, "TNT", { top: "#cc3333", bottom: "#cc3333", side: "#dd4444" }, {}, 2, 0);
 
 export function getBlockDef(id: BlockId): BlockDef | undefined {
   return BLOCK_DEFS.get(id);
@@ -78,4 +84,6 @@ export const PLACEABLE_BLOCKS: BlockId[] = [
   BlockId.WOOD,
   BlockId.LEAVES,
   BlockId.SAND,
+  BlockId.TORCH,
+  BlockId.TNT,
 ];

@@ -53,16 +53,26 @@ export class TextureManager {
 
     this.material = new THREE.MeshLambertMaterial({ map: this.atlas });
 
-    // Separate transparent material for water
+    // Separate transparent material for water/lava
     this.waterMaterial = new THREE.MeshLambertMaterial({
       map: this.atlas,
       transparent: true,
       opacity: 0.55,
       side: THREE.DoubleSide,
     });
+
+    // Lava material with emissive glow
+    this.lavaMaterial = new THREE.MeshLambertMaterial({
+      map: this.atlas,
+      transparent: true,
+      opacity: 0.85,
+      emissive: 0xff4400,
+      emissiveIntensity: 0.6,
+    });
   }
 
   waterMaterial!: THREE.MeshLambertMaterial;
+  lavaMaterial!: THREE.MeshLambertMaterial;
 
   private addNoise(
     ctx: CanvasRenderingContext2D,

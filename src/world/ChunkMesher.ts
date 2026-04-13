@@ -53,8 +53,8 @@ export function buildChunkMesh(
         const blockId = chunk.getBlock(x, y, z);
         if (blockId === BlockId.AIR) continue;
 
-        const isWater = blockId === BlockId.WATER;
-        const target = isWater ? water : solid;
+        const isLiquid = blockId === BlockId.WATER || blockId === BlockId.LAVA;
+        const target = isLiquid ? water : solid;
 
         for (const face of FACES) {
           const [dx, dy, dz] = face.dir;

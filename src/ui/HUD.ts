@@ -6,6 +6,10 @@ export class HUD {
   private debugEl: HTMLDivElement;
   private blockBar: HTMLDivElement;
   private toolBar: HTMLDivElement;
+  private healthBar: HTMLDivElement;
+  private healthFill: HTMLDivElement;
+  private healthText: HTMLDivElement;
+  private dayIndicator: HTMLDivElement;
   private crosshair: HTMLDivElement;
   private audioIndicator: HTMLDivElement;
   private showDebug = false;
@@ -33,6 +37,65 @@ export class HUD {
     });
     this.crosshair.textContent = "+";
     document.body.appendChild(this.crosshair);
+
+    // Health bar
+    this.healthBar = document.createElement("div");
+    Object.assign(this.healthBar.style, {
+      position: "fixed",
+      top: "20px",
+      left: "50%",
+      transform: "translateX(-50%)",
+      width: "200px",
+      height: "20px",
+      background: "rgba(0,0,0,0.5)",
+      borderRadius: "10px",
+      overflow: "hidden",
+      border: "2px solid rgba(255,255,255,0.3)",
+      zIndex: "100",
+    });
+    document.body.appendChild(this.healthBar);
+
+    this.healthFill = document.createElement("div");
+    Object.assign(this.healthFill.style, {
+      width: "100%",
+      height: "100%",
+      background: "linear-gradient(90deg, #cc2222, #ff4444)",
+      transition: "width 0.2s",
+      borderRadius: "8px",
+    });
+    this.healthBar.appendChild(this.healthFill);
+
+    this.healthText = document.createElement("div");
+    Object.assign(this.healthText.style, {
+      position: "fixed",
+      top: "22px",
+      left: "50%",
+      transform: "translateX(-50%)",
+      color: "white",
+      fontFamily: "monospace",
+      fontSize: "12px",
+      fontWeight: "bold",
+      textShadow: "1px 1px 2px black",
+      zIndex: "101",
+      pointerEvents: "none",
+    });
+    document.body.appendChild(this.healthText);
+
+    // Day/night indicator
+    this.dayIndicator = document.createElement("div");
+    Object.assign(this.dayIndicator.style, {
+      position: "fixed",
+      top: "46px",
+      left: "50%",
+      transform: "translateX(-50%)",
+      color: "white",
+      fontFamily: "monospace",
+      fontSize: "11px",
+      textShadow: "1px 1px 2px black",
+      zIndex: "100",
+      pointerEvents: "none",
+    });
+    document.body.appendChild(this.dayIndicator);
 
     // Tool bar (top of block bar)
     this.toolBar = document.createElement("div");
@@ -255,9 +318,29 @@ export class HUD {
     this.audioIndicator.textContent = state;
   }
 
-  debugInfo = { animals: 0, fish: 0 };
+  debugInfo = { animals: 0, fish: 0, zombies: 0 };
+  dayTime = 0.25;
 
   update(player: Player, dt: number): void {
+    // Health bar
+    const healthPct = (player.health / player.maxHealth) * 100;
+    this.healthFill.style.width = healthPct + "%";
+    if (healthPct > 50) {
+      this.healthFill.style.background = "linear-gradient(90deg, #22aa22, #44ff44)";
+    } else if (healthPct > 25) {
+      this.healthFill.style.background = "linear-gradient(90deg, #aaaa22, #ffff44)";
+    } else {
+      this.healthFill.style.background = "linear-gradient(90deg, #cc2222, #ff4444)";
+    }
+    this.healthText.textContent = `${player.health} / ${player.maxHealth}`;
+
+    // Day/night
+    const isNight = this.dayTime < 0.25 || this.dayTime > 0.75;
+    const hour = Math.floor(((this.dayTime + 0.25) % 1) * 24);
+    const ampm = hour >= 12 ? "PM" : "AM";
+    const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    this.dayIndicator.textContent = `${isNight ? "\ud83c\udf19" : "\u2600\ufe0f"} ${h12}:00 ${ampm}`;
+
     this.fpsFrames++;
     this.fpsTime += dt;
     if (this.fpsTime >= 0.5) {
@@ -292,7 +375,7 @@ export class HUD {
         `XYZ: ${p.x.toFixed(1)} / ${p.y.toFixed(1)} / ${p.z.toFixed(1)}`,
         `Chunk: ${Math.floor(p.x / 16)}, ${Math.floor(p.z / 16)}`,
         `Tool: ${toolName}`,
-        `Animals: ${this.debugInfo.animals} Fish: ${this.debugInfo.fish}`,
+        `Animals: ${this.debugInfo.animals} Fish: ${this.debugInfo.fish} Zombies: ${this.debugInfo.zombies}`,
       ].join("<br>");
     }
   }
