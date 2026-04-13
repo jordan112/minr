@@ -9,58 +9,46 @@ export class SoundManager {
   private sfxGain!: GainNode;
   private musicPlaying = false;
   private footstepCooldown = 0;
-  private initialized = false;
 
-  constructor() {
-    // Safari requires AudioContext creation inside a user gesture.
-    // Listen on multiple events to catch the first interaction.
-    const initOnGesture = () => {
-      if (this.initialized) return;
-      this.initContext();
-      document.removeEventListener("click", initOnGesture, true);
-      document.removeEventListener("touchstart", initOnGesture, true);
-      document.removeEventListener("keydown", initOnGesture, true);
-    };
-    document.addEventListener("click", initOnGesture, true);
-    document.addEventListener("touchstart", initOnGesture, true);
-    document.addEventListener("keydown", initOnGesture, true);
-  }
+  /** Must be called from a user gesture (click/keydown) to unlock audio on Safari */
+  init(): void {
+    if (this.ctx) return;
 
-  /** Create AudioContext directly inside a user gesture for Safari compatibility */
-  private initContext(): void {
-    if (this.initialized) return;
-    this.initialized = true;
+    try {
+      const AC = window.AudioContext || (window as any).webkitAudioContext;
+      this.ctx = new AC();
 
-    // Safari: try webkitAudioContext fallback
-    const AC = window.AudioContext || (window as any).webkitAudioContext;
-    this.ctx = new AC();
+      this.masterGain = this.ctx.createGain();
+      this.masterGain.gain.value = 0.7;
+      this.masterGain.connect(this.ctx.destination);
 
-    this.masterGain = this.ctx.createGain();
-    this.masterGain.gain.value = 0.5;
-    this.masterGain.connect(this.ctx.destination);
+      this.musicGain = this.ctx.createGain();
+      this.musicGain.gain.value = 0.3;
+      this.musicGain.connect(this.masterGain);
 
-    this.musicGain = this.ctx.createGain();
-    this.musicGain.gain.value = 0.3;
-    this.musicGain.connect(this.masterGain);
+      this.sfxGain = this.ctx.createGain();
+      this.sfxGain.gain.value = 0.8;
+      this.sfxGain.connect(this.masterGain);
 
-    this.sfxGain = this.ctx.createGain();
-    this.sfxGain.gain.value = 0.6;
-    this.sfxGain.connect(this.masterGain);
+      // Resume if suspended (Safari)
+      if (this.ctx.state === "suspended") {
+        this.ctx.resume();
+      }
 
-    // Immediately resume in case Safari suspended it
-    if (this.ctx.state === "suspended") {
-      this.ctx.resume();
+      // Silent buffer to fully unlock on Safari/iOS
+      const buf = this.ctx.createBuffer(1, 1, this.ctx.sampleRate);
+      const src = this.ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(this.ctx.destination);
+      src.start(0);
+
+      console.log("Audio initialized, state:", this.ctx.state);
+    } catch (e) {
+      console.warn("Failed to init audio:", e);
     }
-
-    // Play a silent buffer to fully unlock audio on Safari/iOS
-    const silentBuf = this.ctx.createBuffer(1, 1, this.ctx.sampleRate);
-    const src = this.ctx.createBufferSource();
-    src.buffer = silentBuf;
-    src.connect(this.ctx.destination);
-    src.start(0);
   }
 
-  private ensureContext(): AudioContext | null {
+  private getCtx(): AudioContext | null {
     if (!this.ctx) return null;
     if (this.ctx.state === "suspended") {
       this.ctx.resume();
@@ -71,12 +59,12 @@ export class SoundManager {
   // --- Sound Effects ---
 
   playBlockBreak(): void {
-    const ctx = this.ensureContext();
+    const ctx = this.getCtx();
     if (!ctx) return;
     const now = ctx.currentTime;
 
     // Crunchy noise burst
-    const bufferSize = ctx.sampleRate * 0.15;
+    const bufferSize = Math.floor(ctx.sampleRate * 0.15);
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = buffer.getChannelData(0);
     for (let i = 0; i < bufferSize; i++) {
@@ -86,7 +74,6 @@ export class SoundManager {
     const source = ctx.createBufferSource();
     source.buffer = buffer;
 
-    // Bandpass for a "rocky" sound
     const filter = ctx.createBiquadFilter();
     filter.type = "bandpass";
     filter.frequency.value = 800;
@@ -102,11 +89,11 @@ export class SoundManager {
   }
 
   playBlockPlace(): void {
-    const ctx = this.ensureContext();
+    const ctx = this.getCtx();
     if (!ctx) return;
     const now = ctx.currentTime;
 
-    // Thud + click
+    // Thud
     const osc = ctx.createOscillator();
     osc.type = "sine";
     osc.frequency.setValueAtTime(150, now);
@@ -120,8 +107,8 @@ export class SoundManager {
     osc.start(now);
     osc.stop(now + 0.12);
 
-    // Click layer
-    const clickBuf = ctx.createBuffer(1, ctx.sampleRate * 0.03, ctx.sampleRate);
+    // Click
+    const clickBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.03), ctx.sampleRate);
     const clickData = clickBuf.getChannelData(0);
     for (let i = 0; i < clickData.length; i++) {
       clickData[i] = (Math.random() * 2 - 1) * (1 - i / clickData.length);
@@ -129,7 +116,7 @@ export class SoundManager {
     const clickSrc = ctx.createBufferSource();
     clickSrc.buffer = clickBuf;
     const clickGain = ctx.createGain();
-    clickGain.gain.setValueAtTime(0.3, now);
+    clickGain.gain.setValueAtTime(0.4, now);
     clickGain.gain.exponentialRampToValueAtTime(0.01, now + 0.03);
     clickSrc.connect(clickGain).connect(this.sfxGain);
     clickSrc.start(now);
@@ -137,11 +124,10 @@ export class SoundManager {
   }
 
   playFootstep(): void {
-    const ctx = this.ensureContext();
+    const ctx = this.getCtx();
     if (!ctx) return;
     const now = ctx.currentTime;
 
-    // Soft thump with slight pitch variation
     const pitch = 100 + Math.random() * 40;
 
     const osc = ctx.createOscillator();
@@ -149,8 +135,7 @@ export class SoundManager {
     osc.frequency.setValueAtTime(pitch, now);
     osc.frequency.exponentialRampToValueAtTime(40, now + 0.08);
 
-    // Noise layer for texture
-    const noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 0.05, ctx.sampleRate);
+    const noiseBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.05), ctx.sampleRate);
     const noiseData = noiseBuf.getChannelData(0);
     for (let i = 0; i < noiseData.length; i++) {
       noiseData[i] = (Math.random() * 2 - 1) * (1 - i / noiseData.length) * 0.3;
@@ -159,11 +144,11 @@ export class SoundManager {
     noiseSrc.buffer = noiseBuf;
 
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.setValueAtTime(0.3, now);
     gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
 
     const noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.15, now);
+    noiseGain.gain.setValueAtTime(0.2, now);
     noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
 
     const filter = ctx.createBiquadFilter();
@@ -179,7 +164,7 @@ export class SoundManager {
   }
 
   playJump(): void {
-    const ctx = this.ensureContext();
+    const ctx = this.getCtx();
     if (!ctx) return;
     const now = ctx.currentTime;
 
@@ -190,7 +175,7 @@ export class SoundManager {
     osc.frequency.exponentialRampToValueAtTime(100, now + 0.2);
 
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.setValueAtTime(0.4, now);
     gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
 
     osc.connect(gain).connect(this.sfxGain);
@@ -198,12 +183,11 @@ export class SoundManager {
     osc.stop(now + 0.2);
   }
 
-  /** Call each frame when the player is walking on the ground */
   updateFootsteps(dt: number, isMoving: boolean, isGrounded: boolean): void {
     this.footstepCooldown -= dt;
     if (isMoving && isGrounded && this.footstepCooldown <= 0) {
       this.playFootstep();
-      this.footstepCooldown = 0.35; // interval between steps
+      this.footstepCooldown = 0.35;
     }
     if (!isMoving || !isGrounded) {
       this.footstepCooldown = 0;
@@ -224,29 +208,25 @@ export class SoundManager {
 
   private playAmbientLoop(): void {
     if (!this.musicPlaying) return;
-    const ctx = this.ensureContext();
+    const ctx = this.getCtx();
     if (!ctx) return;
     const now = ctx.currentTime;
 
-    // Calm ambient: layered slow pads with pentatonic notes
     const pentatonic = [261.6, 293.7, 329.6, 392.0, 440.0, 523.3, 587.3, 659.3];
     const chordSize = 3;
     const duration = 8;
     const fadeTime = 2;
 
-    // Pick random notes from the pentatonic scale
     const notes: number[] = [];
     for (let i = 0; i < chordSize; i++) {
       notes.push(pentatonic[Math.floor(Math.random() * pentatonic.length)]!);
     }
 
     for (const freq of notes) {
-      // Main pad oscillator
       const osc = ctx.createOscillator();
       osc.type = "sine";
-      osc.frequency.value = freq / 2; // one octave down for warmth
+      osc.frequency.value = freq / 2;
 
-      // Slight detuned layer for richness
       const osc2 = ctx.createOscillator();
       osc2.type = "sine";
       osc2.frequency.value = freq / 2 + (Math.random() - 0.5) * 2;
@@ -271,11 +251,9 @@ export class SoundManager {
       osc2.stop(now + duration);
     }
 
-    // Schedule next chord
     setTimeout(() => this.playAmbientLoop(), (duration - 1) * 1000);
   }
 
-  /** Toggle music on/off, returns new state */
   toggleMusic(): boolean {
     if (this.musicPlaying) {
       this.stopMusic();

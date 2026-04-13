@@ -31,18 +31,18 @@ export class TerrainGenerator {
         const wx = worldX + x;
         const wz = worldZ + z;
 
-        // Multi-octave noise for height — gentle rolling hills
+        // Multi-octave noise for height — mostly flat with gentle rolls
         const height = Math.floor(
           SEA_LEVEL +
-          this.noise2D(wx / 200, wz / 200) * 8 +
-          this.noise2D(wx / 80, wz / 80) * 4 +
-          this.noise2D(wx / 40, wz / 40) * 2
+          this.noise2D(wx / 300, wz / 300) * 4 +
+          this.noise2D(wx / 100, wz / 100) * 2 +
+          this.noise2D(wx / 50, wz / 50) * 1
         );
 
         const clampedHeight = Math.max(1, Math.min(WORLD_HEIGHT - 1, height));
 
-        // Water level for ponds/lakes
-        const waterLevel = SEA_LEVEL - 1;
+        // Water level — at SEA_LEVEL so any dip creates ponds
+        const waterLevel = SEA_LEVEL;
 
         for (let y = 0; y <= Math.max(clampedHeight, waterLevel); y++) {
           if (y === 0) {

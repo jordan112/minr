@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { ToolType } from "./ToolSystem";
 
 /**
  * Blocky Minecraft-style player model built from box geometries.
@@ -13,29 +14,33 @@ export class PlayerModel {
   private leftLeg: THREE.Group;
   private rightLeg: THREE.Group;
   private walkTime = 0;
+  private swingTime = 0;
+  private isSwinging = false;
+
+  // Tool meshes — we swap visibility
+  private toolGroups = new Map<ToolType, THREE.Group>();
+  private currentTool: ToolType = ToolType.PICKAXE;
 
   constructor() {
     this.group = new THREE.Group();
 
-    const skin = new THREE.MeshLambertMaterial({ color: 0xc68642 }); // skin tone
-    const shirt = new THREE.MeshLambertMaterial({ color: 0x4a90d9 }); // blue shirt
-    const pants = new THREE.MeshLambertMaterial({ color: 0x3b3b6b }); // dark pants
-    const hair = new THREE.MeshLambertMaterial({ color: 0x3b2316 }); // dark hair
-    const shoe = new THREE.MeshLambertMaterial({ color: 0x2a2a2a }); // dark shoes
+    const skin = new THREE.MeshLambertMaterial({ color: 0xc68642 });
+    const shirt = new THREE.MeshLambertMaterial({ color: 0x4a90d9 });
+    const pants = new THREE.MeshLambertMaterial({ color: 0x3b3b6b });
+    const hair = new THREE.MeshLambertMaterial({ color: 0x3b2316 });
+    const shoe = new THREE.MeshLambertMaterial({ color: 0x2a2a2a });
     const eye = new THREE.MeshLambertMaterial({ color: 0xffffff });
     const pupil = new THREE.MeshLambertMaterial({ color: 0x111111 });
 
-    // Head (8x8x8 pixels → 0.5 x 0.5 x 0.5 units)
+    // Head
     this.head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), skin);
     this.head.position.y = 1.55;
     this.group.add(this.head);
 
-    // Hair on top of head
     const hairMesh = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.15, 0.52), hair);
     hairMesh.position.y = 0.2;
     this.head.add(hairMesh);
 
-    // Eyes
     const leftEye = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.08, 0.02), eye);
     leftEye.position.set(-0.12, 0.05, 0.26);
     this.head.add(leftEye);
@@ -43,7 +48,6 @@ export class PlayerModel {
     rightEye.position.set(0.12, 0.05, 0.26);
     this.head.add(rightEye);
 
-    // Pupils
     const leftPupil = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.02), pupil);
     leftPupil.position.set(-0.12, 0.04, 0.27);
     this.head.add(leftPupil);
@@ -51,18 +55,16 @@ export class PlayerModel {
     rightPupil.position.set(0.12, 0.04, 0.27);
     this.head.add(rightPupil);
 
-    // Body / torso (8x12x4 → 0.5 x 0.75 x 0.25)
+    // Body
     this.body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.75, 0.3), shirt);
     this.body.position.y = 0.975;
     this.group.add(this.body);
 
-    // Arms — pivot from shoulder, so group origin is at shoulder
     // Left arm
     this.leftArm = new THREE.Group();
     this.leftArm.position.set(-0.375, 1.3, 0);
     const leftArmMesh = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.7, 0.25), shirt);
     leftArmMesh.position.y = -0.35;
-    // Forearm skin
     const leftForearm = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.2, 0.24), skin);
     leftForearm.position.y = -0.55;
     this.leftArm.add(leftArmMesh, leftForearm);
@@ -75,30 +77,14 @@ export class PlayerModel {
     rightArmMesh.position.y = -0.35;
     const rightForearm = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.2, 0.24), skin);
     rightForearm.position.y = -0.55;
+    this.rightArm.add(rightArmMesh, rightForearm);
 
-    // Pickaxe in right hand
-    const handleMat = new THREE.MeshLambertMaterial({ color: 0x6b4226 }); // wood
-    const headMat = new THREE.MeshLambertMaterial({ color: 0x888888 }); // iron
+    // Build all tool models and attach to right arm
+    this.buildTools();
 
-    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.6, 0.06), handleMat);
-    handle.position.set(0, -0.7, 0.15);
-    handle.rotation.x = -0.3;
-
-    const pickHead = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.08, 0.06), headMat);
-    pickHead.position.set(0, -0.42, 0.22);
-    pickHead.rotation.x = -0.3;
-
-    // Pick point (tapers)
-    const pickPoint = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.06, 0.06), headMat);
-    pickPoint.position.set(0.2, -0.42, 0.22);
-    pickPoint.rotation.x = -0.3;
-    pickPoint.rotation.z = -0.2;
-
-    this.rightArm.add(rightArmMesh, rightForearm, handle, pickHead, pickPoint);
     this.group.add(this.rightArm);
 
-    // Legs — pivot from hip
-    // Left leg
+    // Legs
     this.leftLeg = new THREE.Group();
     this.leftLeg.position.set(-0.125, 0.6, 0);
     const leftLegMesh = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.45, 0.27), pants);
@@ -108,7 +94,6 @@ export class PlayerModel {
     this.leftLeg.add(leftLegMesh, leftShin);
     this.group.add(this.leftLeg);
 
-    // Right leg
     this.rightLeg = new THREE.Group();
     this.rightLeg.position.set(0.125, 0.6, 0);
     const rightLegMesh = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.45, 0.27), pants);
@@ -118,32 +103,136 @@ export class PlayerModel {
     this.rightLeg.add(rightLegMesh, rightShin);
     this.group.add(this.rightLeg);
 
-    // Cast shadows from all parts
     this.group.traverse((obj) => {
-      if (obj instanceof THREE.Mesh) {
-        obj.castShadow = true;
-      }
+      if (obj instanceof THREE.Mesh) obj.castShadow = true;
     });
+
+    this.setTool(ToolType.PICKAXE);
+  }
+
+  private buildTools(): void {
+    const handleMat = new THREE.MeshLambertMaterial({ color: 0x6b4226 });
+    const ironMat = new THREE.MeshLambertMaterial({ color: 0x999999 });
+    const swordMat = new THREE.MeshLambertMaterial({ color: 0xbbbbdd });
+    const axeHeadMat = new THREE.MeshLambertMaterial({ color: 0x777777 });
+
+    // Hand (empty) — just a small fist indicator, already have forearm
+    const handGroup = new THREE.Group();
+    this.toolGroups.set(ToolType.HAND, handGroup);
+    this.rightArm.add(handGroup);
+
+    // Pickaxe
+    const pickGroup = new THREE.Group();
+    pickGroup.position.set(0, -0.65, 0.2);
+    pickGroup.rotation.x = -0.8;
+    pickGroup.rotation.z = 0.1;
+
+    const pickHandle = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.8, 0.08), handleMat);
+    pickGroup.add(pickHandle);
+
+    const pickHead = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12, 0.08), ironMat);
+    pickHead.position.y = 0.4;
+    pickGroup.add(pickHead);
+
+    const pickTip = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.1, 0.08), ironMat);
+    pickTip.position.set(0.3, 0.35, 0);
+    pickTip.rotation.z = -0.4;
+    pickGroup.add(pickTip);
+
+    this.toolGroups.set(ToolType.PICKAXE, pickGroup);
+    this.rightArm.add(pickGroup);
+
+    // Axe
+    const axeGroup = new THREE.Group();
+    axeGroup.position.set(0, -0.65, 0.2);
+    axeGroup.rotation.x = -0.8;
+    axeGroup.rotation.z = 0.1;
+
+    const axeHandle = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.8, 0.08), handleMat);
+    axeGroup.add(axeHandle);
+
+    // Axe head — wider on one side
+    const axeHead = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.08), axeHeadMat);
+    axeHead.position.set(0.18, 0.35, 0);
+    axeGroup.add(axeHead);
+
+    // Axe blade edge
+    const axeBlade = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.35, 0.1), axeHeadMat);
+    axeBlade.position.set(0.35, 0.35, 0);
+    axeGroup.add(axeBlade);
+
+    this.toolGroups.set(ToolType.AXE, axeGroup);
+    this.rightArm.add(axeGroup);
+
+    // Sword
+    const swordGroup = new THREE.Group();
+    swordGroup.position.set(0, -0.65, 0.2);
+    swordGroup.rotation.x = -0.8;
+    swordGroup.rotation.z = 0.1;
+
+    // Sword handle
+    const swordHandle = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.25, 0.06), handleMat);
+    swordHandle.position.y = -0.15;
+    swordGroup.add(swordHandle);
+
+    // Crossguard
+    const crossguard = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.05, 0.08), ironMat);
+    crossguard.position.y = 0.0;
+    swordGroup.add(crossguard);
+
+    // Blade
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.7, 0.04), swordMat);
+    blade.position.y = 0.38;
+    swordGroup.add(blade);
+
+    // Blade tip
+    const bladeTip = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.1, 0.04), swordMat);
+    bladeTip.position.y = 0.75;
+    swordGroup.add(bladeTip);
+
+    this.toolGroups.set(ToolType.SWORD, swordGroup);
+    this.rightArm.add(swordGroup);
+  }
+
+  setTool(tool: ToolType): void {
+    this.currentTool = tool;
+    for (const [type, group] of this.toolGroups) {
+      group.visible = type === tool;
+    }
+  }
+
+  triggerSwing(): void {
+    this.isSwinging = true;
+    this.swingTime = 0;
   }
 
   update(dt: number, isMoving: boolean, yaw: number, position: THREE.Vector3): void {
-    // Position the model at player feet
     this.group.position.copy(position);
-    // Face the direction the player is looking
-    this.group.rotation.y = yaw + Math.PI; // model faces +Z, camera faces -Z
+    this.group.rotation.y = yaw + Math.PI;
 
     // Walk animation
     if (isMoving) {
       this.walkTime += dt * 8;
     } else {
-      // Ease back to idle
       this.walkTime *= 0.85;
     }
 
     const swing = Math.sin(this.walkTime) * 0.6;
     this.leftArm.rotation.x = swing;
-    this.rightArm.rotation.x = -swing;
     this.leftLeg.rotation.x = -swing;
     this.rightLeg.rotation.x = swing;
+
+    // Right arm: walk swing OR attack swing
+    if (this.isSwinging) {
+      this.swingTime += dt * 8;
+      // Quick swing down and back
+      const swingAmt = Math.sin(this.swingTime * Math.PI) * 1.5;
+      this.rightArm.rotation.x = -swingAmt;
+      if (this.swingTime > 1) {
+        this.isSwinging = false;
+      }
+    } else {
+      this.rightArm.rotation.x = -swing;
+    }
   }
 }

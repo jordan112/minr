@@ -101,6 +101,11 @@ export class Animal {
   private walkTime = 0;
   private legs: THREE.Group[] = [];
   position: THREE.Vector3;
+  health = 10;
+  isDead = false;
+  private hurtTimer = 0;
+  private deathTimer = 0;
+  private originalMaterials: THREE.MeshLambertMaterial[] = [];
 
   constructor(type: AnimalType, world: World, x: number, y: number, z: number) {
     this.type = type;
@@ -245,9 +250,52 @@ export class Animal {
     if (this.legs[2]) this.legs[2].rotation.x = -swing;
     if (this.legs[3]) this.legs[3].rotation.x = -swing;
 
+    // Hurt flash
+    if (this.hurtTimer > 0) {
+      this.hurtTimer -= dt;
+      // Flash red
+      const flash = this.hurtTimer > 0 && Math.floor(this.hurtTimer * 10) % 2 === 0;
+      this.group.traverse((obj) => {
+        if (obj instanceof THREE.Mesh && obj.material instanceof THREE.MeshLambertMaterial) {
+          obj.material.emissive.setHex(flash ? 0xff0000 : 0x000000);
+        }
+      });
+    }
+
+    // Death animation
+    if (this.isDead) {
+      this.deathTimer += dt;
+      this.group.rotation.z = Math.min(this.deathTimer * 3, Math.PI / 2);
+      this.group.position.y = this.position.y - this.deathTimer * 0.5;
+      if (this.deathTimer > 1.5) {
+        // Signal ready for removal
+        this.group.visible = false;
+      }
+      return;
+    }
+
     // Update visual
     this.group.position.copy(this.position);
     this.group.rotation.y = this.currentYaw;
+  }
+
+  takeDamage(amount: number): void {
+    if (this.isDead) return;
+    this.health -= amount;
+    this.hurtTimer = 0.4;
+
+    // Knockback
+    this.velocity.y = 4;
+
+    if (this.health <= 0) {
+      this.isDead = true;
+      this.deathTimer = 0;
+    }
+  }
+
+  /** Radius for collision with player */
+  get radius(): number {
+    return 0.5;
   }
 
   private checkCollision(x: number, y: number, z: number): boolean {

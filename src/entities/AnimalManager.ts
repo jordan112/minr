@@ -34,6 +34,13 @@ export class AnimalManager {
       const animal = this.animals[i]!;
       animal.update(dt);
 
+      // Remove dead animals after death animation
+      if (animal.isDead && !animal.group.visible) {
+        this.scene.remove(animal.group);
+        this.animals.splice(i, 1);
+        continue;
+      }
+
       // Despawn if too far
       const dx = animal.position.x - playerX;
       const dz = animal.position.z - playerZ;
@@ -42,6 +49,30 @@ export class AnimalManager {
         this.animals.splice(i, 1);
       }
     }
+  }
+
+  /** Get all living animals for collision/combat checks */
+  getAnimals(): readonly Animal[] {
+    return this.animals;
+  }
+
+  /** Find the nearest animal within range of a point */
+  findNearestInRange(x: number, y: number, z: number, range: number): Animal | null {
+    let nearest: Animal | null = null;
+    let nearestDist = range * range;
+
+    for (const animal of this.animals) {
+      if (animal.isDead) continue;
+      const dx = animal.position.x - x;
+      const dy = animal.position.y - y;
+      const dz = animal.position.z - z;
+      const distSq = dx * dx + dy * dy + dz * dz;
+      if (distSq < nearestDist) {
+        nearestDist = distSq;
+        nearest = animal;
+      }
+    }
+    return nearest;
   }
 
   private trySpawn(playerX: number, playerZ: number): void {
