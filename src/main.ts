@@ -91,17 +91,18 @@ document.addEventListener("keydown", (e) => {
     sound.toggleMusic();
   }
 
-  // F to cast fishing rod (shortcut)
+  // F to equip fishing rod
   if (e.code === "KeyF") {
-    // Auto-equip fishing rod
     currentTool = ToolType.FISHING_ROD;
     controller.playerModel.setTool(currentTool);
     hud.setTool(currentTool);
-    // Cast if looking at water
-    if (fishingGame.state === "idle" && raycaster.lastWaterHit) {
-      fishingGame.startFishing();
-      controller.playerModel.triggerSwing();
-    }
+  }
+
+  // C to cast fishing line (when holding rod)
+  if (e.code === "KeyC" && currentTool === ToolType.FISHING_ROD && fishingGame.state === "idle") {
+    fishingGame.startFishing();
+    controller.playerModel.triggerSwing();
+    sound.playSplash();
   }
 
   // R to reset position
@@ -175,12 +176,10 @@ function gameLoop(now: number) {
     if (currentTool === ToolType.FISHING_ROD) {
       // Fishing rod: cast or interact with mini-game
       if (fishingGame.state === "idle") {
-        // Check if looking at water (use water-detecting raycast)
-        if (raycaster.lastWaterHit) {
-          fishingGame.startFishing();
-          controller.playerModel.triggerSwing();
-          sound.playSplash();
-        }
+        // Cast — just start fishing (don't require aiming at water)
+        fishingGame.startFishing();
+        controller.playerModel.triggerSwing();
+        sound.playSplash();
       } else if (fishingGame.state === "bite" || fishingGame.state === "reeling") {
         fishingGame.onMouseDown();
       }
@@ -252,6 +251,8 @@ function gameLoop(now: number) {
     }
   }
 
+  hud.debugInfo.animals = animals.getAnimals().length;
+  hud.debugInfo.fish = aquatics.getCreatures().length;
   hud.update(player, dt);
   input.resetFrame();
   sceneManager.render();

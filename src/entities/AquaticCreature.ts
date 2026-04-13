@@ -44,29 +44,29 @@ export class AquaticCreature {
   }
 
   private buildFish(): void {
-    // Small colorful fish
+    // Colorful fish — big enough to see
     const colors = [0xff6633, 0x33aaff, 0xffcc00, 0x33ff66, 0xff33aa];
     const color = colors[Math.floor(Math.random() * colors.length)]!;
     const mat = new THREE.MeshLambertMaterial({ color });
 
-    // Body - small oval
-    const body = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.12, 0.3), mat);
+    // Body
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.25, 0.6), mat);
     this.group.add(body);
 
     // Tail
     this.tailGroup = new THREE.Group();
-    this.tailGroup.position.z = -0.18;
-    const tail = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.14, 0.1), mat);
+    this.tailGroup.position.z = -0.35;
+    const tail = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.3, 0.2), mat);
     this.tailGroup.add(tail);
     this.group.add(this.tailGroup);
 
     // Eye
     const eyeMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
-    const leftEye = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.02), eyeMat);
-    leftEye.position.set(-0.08, 0.02, 0.1);
+    const leftEye = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.03), eyeMat);
+    leftEye.position.set(-0.16, 0.04, 0.2);
     this.group.add(leftEye);
-    const rightEye = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.02), eyeMat);
-    rightEye.position.set(0.08, 0.02, 0.1);
+    const rightEye = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.03), eyeMat);
+    rightEye.position.set(0.16, 0.04, 0.2);
     this.group.add(rightEye);
 
     // Dorsal fin
@@ -206,9 +206,9 @@ export class AquaticCreature {
     this.targetYaw = Math.random() * Math.PI * 2;
     this.dirChangeTimer = 3 + Math.random() * 5;
 
-    // Fish occasionally jump
+    // Fish jump frequently so they're visible
     if (this.type === "fish") {
-      this.jumpTimer = 5 + Math.random() * 15;
+      this.jumpTimer = 3 + Math.random() * 8;
     }
   }
 
@@ -383,9 +383,9 @@ export class AquaticCreature {
 
   private getSwimDepth(): number {
     switch (this.type) {
-      case "fish": return 0.3 + Math.random() * 0.3;
-      case "shark": return 0.5;
-      case "squid": return 1.5;
+      case "fish": return 0.1; // swim right at the surface, visible from above
+      case "shark": return 0.3; // dorsal fin pokes out
+      case "squid": return 0.8;
     }
   }
 }

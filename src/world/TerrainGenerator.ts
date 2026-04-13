@@ -33,16 +33,16 @@ export class TerrainGenerator {
 
         // Multi-octave noise for height — mostly flat, sits ABOVE water
         let baseHeight =
-          SEA_LEVEL + 3 +
+          SEA_LEVEL + 2 +
           this.noise2D(wx / 300, wz / 300) * 3 +
           this.noise2D(wx / 100, wz / 100) * 2 +
           this.noise2D(wx / 50, wz / 50) * 1;
 
-        // Occasional small lakes — rare and contained
-        const lakeNoise = this.noise2D(wx / 40 + 500, wz / 40 + 500);
-        if (lakeNoise < -0.55) {
-          // Only deep carving in small pockets
-          const depth = (-lakeNoise - 0.55) * 15;
+        // Lakes — carve ponds into terrain using a separate noise layer
+        // Scale 30 = smallish ponds, threshold -0.35 = moderate frequency
+        const lakeNoise = this.noise2D(wx / 30 + 500, wz / 30 + 500);
+        if (lakeNoise < -0.35) {
+          const depth = (-lakeNoise - 0.35) * 10;
           baseHeight -= depth;
         }
 

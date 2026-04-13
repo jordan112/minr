@@ -4,10 +4,10 @@ import type { AquaticType } from "./AquaticCreature";
 import { World } from "../world/World";
 import { BlockId } from "../world/BlockType";
 
-const MAX_AQUATIC = 20;
-const SPAWN_RADIUS = 50;
-const DESPAWN_RADIUS = 90;
-const SPAWN_INTERVAL = 3;
+const MAX_AQUATIC = 25;
+const SPAWN_RADIUS = 40;
+const DESPAWN_RADIUS = 70;
+const SPAWN_INTERVAL = 1; // try every second
 
 export class AquaticManager {
   private creatures: AquaticCreature[] = [];

@@ -224,7 +224,7 @@ export class HUD {
         <b style="color:#66ff66">BUILD:</b> Right-click places blocks &nbsp; 1-6 picks block type<br>
         <b>BREAK:</b> Left-click breaks blocks or attacks<br>
         <b>TOOLS:</b> Tab / Q to cycle (Hand, Pick, Axe, Sword, Rod)<br>
-        <b>FISH:</b> Press F near water to cast &nbsp; Hold click to reel<br>
+        <b>FISH:</b> F = equip rod &nbsp; C or Left-click = cast &nbsp; Hold click to reel<br>
         <b>RESET:</b> R to teleport home<br>
         <b>MUSIC:</b> M &nbsp;&nbsp; <b>DEBUG:</b> F3
       </div>
@@ -254,6 +254,8 @@ export class HUD {
   setAudioState(state: string): void {
     this.audioIndicator.textContent = state;
   }
+
+  debugInfo = { animals: 0, fish: 0 };
 
   update(player: Player, dt: number): void {
     this.fpsFrames++;
@@ -290,6 +292,7 @@ export class HUD {
         `XYZ: ${p.x.toFixed(1)} / ${p.y.toFixed(1)} / ${p.z.toFixed(1)}`,
         `Chunk: ${Math.floor(p.x / 16)}, ${Math.floor(p.z / 16)}`,
         `Tool: ${toolName}`,
+        `Animals: ${this.debugInfo.animals} Fish: ${this.debugInfo.fish}`,
       ].join("<br>");
     }
   }
