@@ -1,0 +1,21 @@
+{
+  "name": "minr",
+  "module": "src/main.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun index.html",
+    "build": "bun build src/main.ts --outdir=dist --minify"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/three": "^0.183.1"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "simplex-noise": "^4.0.3",
+    "three": "^0.183.2"
+  }
+}
