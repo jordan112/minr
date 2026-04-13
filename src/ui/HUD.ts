@@ -56,12 +56,14 @@ export class HUD {
       [ToolType.PICKAXE]: "\u26cf",
       [ToolType.AXE]: "\ud83e\ude93",
       [ToolType.SWORD]: "\u2694\ufe0f",
+      [ToolType.FISHING_ROD]: "\ud83c\udfa3",
     };
     const toolNames: Record<ToolType, string> = {
       [ToolType.HAND]: "Hand",
       [ToolType.PICKAXE]: "Pick",
       [ToolType.AXE]: "Axe",
       [ToolType.SWORD]: "Sword",
+      [ToolType.FISHING_ROD]: "Rod",
     };
 
     for (const tool of ALL_TOOLS) {

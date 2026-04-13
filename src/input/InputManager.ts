@@ -4,6 +4,7 @@ export class InputManager {
   private _mouseDY = 0;
   private _leftClick = false;
   private _rightClick = false;
+  private _leftHeld = false;
   isPointerLocked = false;
   private canvas: HTMLCanvasElement;
 
@@ -33,8 +34,12 @@ export class InputManager {
         canvas.requestPointerLock();
         return;
       }
-      if (e.button === 0) this._leftClick = true;
+      if (e.button === 0) { this._leftClick = true; this._leftHeld = true; }
       if (e.button === 2) this._rightClick = true;
+    });
+
+    canvas.addEventListener("mouseup", (e) => {
+      if (e.button === 0) this._leftHeld = false;
     });
 
     canvas.addEventListener("contextmenu", (e) => e.preventDefault());
@@ -51,6 +56,7 @@ export class InputManager {
   get mouseDX(): number { return this._mouseDX; }
   get mouseDY(): number { return this._mouseDY; }
   get leftClick(): boolean { return this._leftClick; }
+  get leftHeld(): boolean { return this._leftHeld; }
   get rightClick(): boolean { return this._rightClick; }
 
   resetFrame(): void {

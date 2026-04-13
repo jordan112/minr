@@ -13,6 +13,7 @@ import { SoundManager } from "./audio/SoundManager";
 import { AnimalManager } from "./entities/AnimalManager";
 import { ToolType, ALL_TOOLS, getToolDef } from "./player/ToolSystem";
 import { AquaticManager } from "./entities/AquaticManager";
+import { FishingGame } from "./ui/FishingGame";
 
 // --- Init ---
 const canvas = document.getElementById("game") as HTMLCanvasElement;
@@ -27,6 +28,12 @@ const hud = new HUD();
 const sound = new SoundManager();
 const animals = new AnimalManager(sceneManager.scene, world);
 const aquatics = new AquaticManager(sceneManager.scene, world);
+const fishingGame = new FishingGame();
+
+fishingGame.onCatch = (fishName) => {
+  console.log("Caught:", fishName);
+  // Could add inventory here later
+};
 
 // Block selection
 hud.onBlockSelect = (index) => {
@@ -124,38 +131,70 @@ function gameLoop(now: number) {
   sound.updateFootsteps(dt, controller.isMoving, player.isGrounded);
   if (controller.justJumped) sound.playJump();
 
-  // Left click: attack animal or break block
+  // Update fishing mini-game
+  fishingGame.update(dt);
+
+  // Left click: fishing, attack, or break
   if (input.leftClick) {
-    // Check for animal in attack range first
-    const attackOrigin = controller.getRayOrigin();
-    const attackDir = controller.getLookDirection();
-    const attackPoint = attackOrigin.clone().add(attackDir.clone().multiplyScalar(3));
-    const toolDef = getToolDef(currentTool);
+    if (currentTool === ToolType.FISHING_ROD) {
+      // Fishing rod: cast or interact with mini-game
+      if (fishingGame.state === "idle") {
+        // Check if looking at water
+        if (raycaster.lastHit) {
+          const [bx, by, bz] = raycaster.lastHit.blockPos;
+          const block = world.getBlock(bx, by, bz);
+          if (block === BlockId.WATER) {
+            fishingGame.startFishing();
+            controller.playerModel.triggerSwing();
+          }
+        }
+      } else if (fishingGame.state === "bite" || fishingGame.state === "reeling") {
+        fishingGame.onMouseDown();
+      }
+    } else {
+      // Normal attack/break
+      const attackOrigin = controller.getRayOrigin();
+      const attackDir = controller.getLookDirection();
+      const attackPoint = attackOrigin.clone().add(attackDir.clone().multiplyScalar(3));
+      const toolDef = getToolDef(currentTool);
 
-    const target = animals.findNearestInRange(
-      attackPoint.x, attackPoint.y, attackPoint.z, 2.5
-    );
+      const target = animals.findNearestInRange(
+        attackPoint.x, attackPoint.y, attackPoint.z, 2.5
+      );
 
-    // Also check aquatic creatures
-    const aquaticTarget = aquatics.findNearestInRange(
-      attackPoint.x, attackPoint.y, attackPoint.z, 2.5
-    );
+      const aquaticTarget = aquatics.findNearestInRange(
+        attackPoint.x, attackPoint.y, attackPoint.z, 2.5
+      );
 
-    if (target) {
-      target.takeDamage(toolDef.damage);
-      controller.playerModel.triggerSwing();
-      sound.playBlockBreak();
-    } else if (aquaticTarget) {
-      aquaticTarget.takeDamage(toolDef.damage);
-      controller.playerModel.triggerSwing();
-      sound.playBlockBreak();
-    } else if (raycaster.lastHit) {
-      // Break block
-      const [bx, by, bz] = raycaster.lastHit.blockPos;
-      world.setBlock(bx, by, bz, BlockId.AIR);
-      controller.playerModel.triggerSwing();
-      sound.playBlockBreak();
+      if (target) {
+        target.takeDamage(toolDef.damage);
+        controller.playerModel.triggerSwing();
+        sound.playBlockBreak();
+      } else if (aquaticTarget) {
+        aquaticTarget.takeDamage(toolDef.damage);
+        controller.playerModel.triggerSwing();
+        sound.playBlockBreak();
+      } else if (raycaster.lastHit) {
+        const [bx, by, bz] = raycaster.lastHit.blockPos;
+        world.setBlock(bx, by, bz, BlockId.AIR);
+        controller.playerModel.triggerSwing();
+        sound.playBlockBreak();
+      }
     }
+  }
+
+  // Fishing reeling: hold mouse to reel
+  if (fishingGame.state === "reeling") {
+    if (input.leftHeld) {
+      fishingGame.onMouseDown();
+    } else {
+      fishingGame.onMouseUp();
+    }
+  }
+
+  // Cancel fishing if tool changes
+  if (currentTool !== ToolType.FISHING_ROD && fishingGame.state !== "idle") {
+    fishingGame.cancelFishing();
   }
 
   // Right click: place block

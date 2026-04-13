@@ -192,6 +192,43 @@ export class PlayerModel {
 
     this.toolGroups.set(ToolType.SWORD, swordGroup);
     this.rightArm.add(swordGroup);
+
+    // Fishing Rod
+    const rodGroup = new THREE.Group();
+    rodGroup.position.set(0, -0.65, 0.2);
+    rodGroup.rotation.x = -1.0;
+    rodGroup.rotation.z = 0.1;
+
+    // Rod pole (long thin stick)
+    const rodPole = new THREE.Mesh(new THREE.BoxGeometry(0.04, 1.2, 0.04), handleMat);
+    rodPole.position.y = 0.2;
+    rodGroup.add(rodPole);
+
+    // Rod tip (thinner)
+    const rodTip = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.3, 0.025), handleMat);
+    rodTip.position.y = 0.95;
+    rodGroup.add(rodTip);
+
+    // Reel
+    const reelMat = new THREE.MeshLambertMaterial({ color: 0x888888 });
+    const reel = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.06, 0.1), reelMat);
+    reel.position.set(0, -0.15, 0.05);
+    rodGroup.add(reel);
+
+    // Fishing line (thin vertical line from tip)
+    const lineMat = new THREE.MeshLambertMaterial({ color: 0xcccccc });
+    const line = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.5, 0.01), lineMat);
+    line.position.set(0, 1.3, 0);
+    rodGroup.add(line);
+
+    // Hook
+    const hookMat = new THREE.MeshLambertMaterial({ color: 0xaaaaaa });
+    const hook = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.06, 0.03), hookMat);
+    hook.position.set(0, 1.05, 0);
+    rodGroup.add(hook);
+
+    this.toolGroups.set(ToolType.FISHING_ROD, rodGroup);
+    this.rightArm.add(rodGroup);
   }
 
   setTool(tool: ToolType): void {
