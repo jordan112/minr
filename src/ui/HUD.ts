@@ -284,13 +284,13 @@ export class HUD {
       <div style="font-size:13px;opacity:0.8;line-height:2.2;text-align:left;max-width:420px">
         <b>MOVE:</b> WASD / Arrows &nbsp;&nbsp; <b>JUMP:</b> Space<br>
         <b>CAMERA:</b> V to toggle 1st/3rd person<br>
-        <b style="color:#66ff66">BUILD:</b> B or Right-click places blocks &nbsp; 1-6 picks type<br>
+        <b style="color:#66ff66">BUILD:</b> B / E / Right-click places blocks &nbsp; 1-8 picks type<br>
         <b>BREAK:</b> Left-click breaks blocks or attacks<br>
         <b>TOOLS:</b> Tab / Q to cycle (Hand, Pick, Axe, Sword, Rod)<br>
         <b>FISH:</b> F = equip rod &nbsp; C or Left-click = cast &nbsp; Hold click to reel<br>
-        <b>HEAL:</b> Stay safe for 3 seconds to auto-regen<br>
-        <b>RESET:</b> R to teleport home &nbsp;&nbsp; <b>PAUSE:</b> P<br>
-        <b>MUSIC:</b> M &nbsp;&nbsp; <b>DEBUG:</b> F3
+        <b style="color:#ffaa33">SPAWN:</b> G to spawn creatures (T-Rex, Dragon, etc.)<br>
+        <b>HEAL:</b> Stay safe 3s to auto-regen &nbsp; <b>PAUSE:</b> P<br>
+        <b>RESET:</b> R &nbsp; <b>MUSIC:</b> M &nbsp; <b>DEBUG:</b> F3
       </div>
     `;
     document.body.appendChild(overlay);

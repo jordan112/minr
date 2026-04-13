@@ -11,6 +11,7 @@ import { BlockId, PLACEABLE_BLOCKS, isSolid } from "./world/BlockType";
 import { PLAYER_HEIGHT } from "./utils/constants";
 import { SoundManager } from "./audio/SoundManager";
 import { AnimalManager } from "./entities/AnimalManager";
+import { Animal } from "./entities/Animal";
 import { ToolType, ALL_TOOLS, getToolDef } from "./player/ToolSystem";
 import { AquaticManager } from "./entities/AquaticManager";
 import { FishingGame } from "./ui/FishingGame";
@@ -18,6 +19,7 @@ import { SignManager } from "./entities/SignManager";
 import { Villager } from "./entities/Villager";
 import { Zombie } from "./entities/Zombie";
 import { RareCreature, ALL_RARE_TYPES } from "./entities/RareCreature";
+import type { RareType } from "./entities/RareCreature";
 
 // --- Init ---
 const canvas = document.getElementById("game") as HTMLCanvasElement;
@@ -133,9 +135,14 @@ document.addEventListener("keydown", (e) => {
     sound.playSplash();
   }
 
-  // P or Escape to pause
-  if (e.code === "KeyP" || e.code === "Escape") {
+  // P to pause
+  if (e.code === "KeyP") {
     isPaused = !isPaused;
+  }
+
+  // G to open spawn menu
+  if (e.code === "KeyG") {
+    showSpawnMenu();
   }
 
   // R to reset position
@@ -144,6 +151,96 @@ document.addEventListener("keydown", (e) => {
     player.velocity.set(0, 0, 0);
   }
 });
+
+// Spawn menu
+function showSpawnMenu() {
+  const existing = document.getElementById("spawn-menu");
+  if (existing) { existing.remove(); return; }
+
+  const menu = document.createElement("div");
+  menu.id = "spawn-menu";
+  Object.assign(menu.style, {
+    position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
+    background: "rgba(0,0,0,0.85)", padding: "20px", borderRadius: "10px",
+    color: "white", fontFamily: "monospace", fontSize: "14px", zIndex: "300",
+    display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", minWidth: "300px",
+  });
+
+  const title = document.createElement("div");
+  title.textContent = "SPAWN CREATURE (G to close)";
+  title.style.gridColumn = "1/3";
+  title.style.textAlign = "center";
+  title.style.fontWeight = "bold";
+  title.style.marginBottom = "8px";
+  menu.appendChild(title);
+
+  const spawns = [
+    { label: "Sheep", fn: () => spawnAnimalAt("sheep") },
+    { label: "Pig", fn: () => spawnAnimalAt("pig") },
+    { label: "Cow", fn: () => spawnAnimalAt("cow") },
+    { label: "Zombie", fn: () => spawnZombieAt() },
+    { label: "T-Rex", fn: () => spawnRareAt("trex") },
+    { label: "Bigfoot", fn: () => spawnRareAt("bigfoot") },
+    { label: "Dragon", fn: () => spawnRareAt("dragon") },
+    { label: "Unicorn", fn: () => spawnRareAt("unicorn") },
+    { label: "Yeti", fn: () => spawnRareAt("yeti") },
+    { label: "Villager", fn: () => spawnVillagerAt() },
+  ];
+
+  for (const s of spawns) {
+    const btn = document.createElement("button");
+    btn.textContent = s.label;
+    Object.assign(btn.style, {
+      padding: "8px", background: "#444", color: "white", border: "1px solid #666",
+      borderRadius: "4px", cursor: "pointer", fontFamily: "monospace", fontSize: "13px",
+    });
+    btn.addEventListener("click", () => { s.fn(); menu.remove(); });
+    btn.addEventListener("mouseenter", () => { btn.style.background = "#666"; });
+    btn.addEventListener("mouseleave", () => { btn.style.background = "#444"; });
+    menu.appendChild(btn);
+  }
+
+  document.body.appendChild(menu);
+}
+
+function getSpawnPos(): [number, number, number] {
+  const dir = controller.getLookDirection();
+  const x = player.position.x + dir.x * 5;
+  const z = player.position.z + dir.z * 5;
+  let y = -1;
+  for (let sy = 80; sy >= 1; sy--) {
+    if (isSolid(world.getBlock(Math.floor(x), sy, Math.floor(z)))) { y = sy + 1; break; }
+  }
+  if (y < 0) y = Math.floor(player.position.y);
+  return [x, y, z];
+}
+
+function spawnAnimalAt(type: "sheep" | "pig" | "cow") {
+  const [x, y, z] = getSpawnPos();
+  const animal = new Animal(type, world, x, y, z);
+  sceneManager.scene.add(animal.group);
+}
+
+function spawnZombieAt() {
+  const [x, y, z] = getSpawnPos();
+  const zombie = new Zombie(world, x, y, z);
+  zombies.push(zombie);
+  sceneManager.scene.add(zombie.group);
+}
+
+function spawnRareAt(type: RareType) {
+  const [x, y, z] = getSpawnPos();
+  const rc = new RareCreature(type, world, x, y, z);
+  rareCreatures.push(rc);
+  sceneManager.scene.add(rc.group);
+}
+
+function spawnVillagerAt() {
+  const [x, y, z] = getSpawnPos();
+  const v = new Villager(world, x, y, z);
+  villagers.push(v);
+  sceneManager.scene.add(v.group);
+}
 
 // --- Game Loop ---
 let lastTime = performance.now();
@@ -234,10 +331,23 @@ function gameLoop(now: number) {
     v.update(dt, player.position);
   }
 
-  // Zombie spawning (more at night)
+  // Check if player is hiding (has a roof overhead = solid block within 4 blocks above)
+  let playerHidden = false;
+  for (let dy = 1; dy <= 4; dy++) {
+    if (isSolid(world.getBlock(
+      Math.floor(player.position.x),
+      Math.floor(player.position.y + PLAYER_HEIGHT) + dy,
+      Math.floor(player.position.z)
+    ))) {
+      playerHidden = true;
+      break;
+    }
+  }
+
+  // Zombie spawning — ONLY at night
   zombieSpawnTimer -= dt;
-  if (zombieSpawnTimer <= 0 && zombies.length < (isNight ? 10 : 3)) {
-    zombieSpawnTimer = isNight ? 3 : 15;
+  if (zombieSpawnTimer <= 0 && isNight && zombies.length < 10) {
+    zombieSpawnTimer = 3 + Math.random() * 3;
     const angle = Math.random() * Math.PI * 2;
     const dist = 25 + Math.random() * 15;
     const zx = player.position.x + Math.cos(angle) * dist;
@@ -260,17 +370,24 @@ function gameLoop(now: number) {
   // Update zombies
   for (let i = zombies.length - 1; i >= 0; i--) {
     const z = zombies[i]!;
-    z.update(dt, player.position);
+    z.update(dt, player.position, playerHidden);
 
-    // Remove dead zombies after animation
+    // Remove dead zombies
     if (z.isDead && !z.group.visible) {
       sceneManager.scene.remove(z.group);
       zombies.splice(i, 1);
       continue;
     }
 
-    // Zombie attacks player
-    if (!z.isDead) {
+    // Despawn at dawn
+    if (!isNight && !z.isDead) {
+      sceneManager.scene.remove(z.group);
+      zombies.splice(i, 1);
+      continue;
+    }
+
+    // Zombie attacks player (only if not hidden)
+    if (!z.isDead && !playerHidden) {
       const dx = z.position.x - player.position.x;
       const dz = z.position.z - player.position.z;
       const dist = Math.sqrt(dx * dx + dz * dz);
@@ -279,7 +396,6 @@ function gameLoop(now: number) {
         z.doAttack();
       }
 
-      // Despawn far zombies
       if (dist > 60) {
         sceneManager.scene.remove(z.group);
         zombies.splice(i, 1);
@@ -287,10 +403,10 @@ function gameLoop(now: number) {
     }
   }
 
-  // Rare creature spawning
+  // Rare creature spawning — hostile ones only at night
   rareSpawnTimer -= dt;
   if (rareSpawnTimer <= 0 && rareCreatures.length < 3) {
-    rareSpawnTimer = 40 + Math.random() * 40;
+    rareSpawnTimer = 30 + Math.random() * 30;
     const angle = Math.random() * Math.PI * 2;
     const dist = 20 + Math.random() * 25;
     const rx = player.position.x + Math.cos(angle) * dist;
@@ -300,7 +416,11 @@ function gameLoop(now: number) {
       if (isSolid(world.getBlock(Math.floor(rx), y, Math.floor(rz)))) { ry = y + 1; break; }
     }
     if (ry > 0) {
-      const type = ALL_RARE_TYPES[Math.floor(Math.random() * ALL_RARE_TYPES.length)]!;
+      // Hostile rares only at night, passive anytime
+      const hostileTypes: RareType[] = ["trex", "dragon", "yeti"];
+      const passiveTypes: RareType[] = ["bigfoot", "unicorn"];
+      const pool = isNight ? ALL_RARE_TYPES : passiveTypes;
+      const type = pool[Math.floor(Math.random() * pool.length)]!;
       const rc = new RareCreature(type, world, rx, ry, rz);
       rareCreatures.push(rc);
       sceneManager.scene.add(rc.group);
@@ -310,7 +430,7 @@ function gameLoop(now: number) {
   // Update rare creatures
   for (let i = rareCreatures.length - 1; i >= 0; i--) {
     const rc = rareCreatures[i]!;
-    rc.update(dt, player.position);
+    rc.update(dt, player.position, playerHidden);
 
     if (rc.isDead && !rc.group.visible) {
       sceneManager.scene.remove(rc.group);
@@ -479,14 +599,24 @@ function gameLoop(now: number) {
     fishingGame.cancelFishing();
   }
 
-  // Place block: right-click OR B key
+  // Place block: right-click OR B/E key
   const wantsPlace = input.rightClick || input.placeClick;
-  if (wantsPlace && raycaster.lastHit) {
-    const [bx, by, bz] = raycaster.lastHit.blockPos;
-    const [nx, ny, nz] = raycaster.lastHit.faceNormal;
-    const placeX = bx + nx;
-    const placeY = by + ny;
-    const placeZ = bz + nz;
+  if (wantsPlace) {
+    let placeX: number, placeY: number, placeZ: number;
+
+    if (raycaster.lastHit) {
+      const [bx, by, bz] = raycaster.lastHit.blockPos;
+      const [nx, ny, nz] = raycaster.lastHit.faceNormal;
+      placeX = bx + nx;
+      placeY = by + ny;
+      placeZ = bz + nz;
+    } else {
+      // Fallback: place 2 blocks in front of player at eye level
+      const dir = controller.getLookDirection();
+      placeX = Math.floor(player.position.x + dir.x * 3);
+      placeY = Math.floor(player.position.y + PLAYER_HEIGHT - 0.5 + dir.y * 3);
+      placeZ = Math.floor(player.position.z + dir.z * 3);
+    }
 
     const px = player.position.x;
     const py = player.position.y;

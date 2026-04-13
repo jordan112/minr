@@ -337,7 +337,7 @@ export class RareCreature {
     }
   }
 
-  update(dt: number, playerPos: THREE.Vector3): void {
+  update(dt: number, playerPos: THREE.Vector3, playerHidden = false): void {
     if (this.isDead) {
       this.deathTimer += dt;
       this.group.rotation.z = Math.min(this.deathTimer * 2, Math.PI / 2);
@@ -362,7 +362,7 @@ export class RareCreature {
     const dz = playerPos.z - this.position.z;
     const dist = Math.sqrt(dx * dx + dz * dz);
 
-    if (this.config.hostile && dist < 25) {
+    if (this.config.hostile && dist < 25 && !playerHidden) {
       // Chase player
       this.currentYaw = Math.atan2(dx, dz);
       this.position.x += (dx / dist) * this.config.speed * dt;

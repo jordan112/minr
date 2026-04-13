@@ -17,9 +17,12 @@ const SPEECH_BUBBLES = [
   "Try TNT... boom!",
 ];
 
+const VILLAGER_NAMES = ["Sawyer", "Ryan", "Weston", "Santi", "Dylan", "Max", "Leo", "Finn", "Kai", "Milo"];
+
 export class Villager {
   group: THREE.Group;
   position: THREE.Vector3;
+  name: string;
   private world: World;
   private velocity = new THREE.Vector3();
   private targetYaw = 0;
@@ -41,6 +44,7 @@ export class Villager {
     this.position = new THREE.Vector3(x, y, z);
     this.group = new THREE.Group();
     this.currentYaw = Math.random() * Math.PI * 2;
+    this.name = VILLAGER_NAMES[Math.floor(Math.random() * VILLAGER_NAMES.length)]!;
 
     // Robe colors
     const robeColors = [0x8b4513, 0x2e5a2e, 0x4a3080, 0x804020];
@@ -114,6 +118,24 @@ export class Villager {
     rightLegMesh.position.y = -0.275;
     this.rightLeg.add(rightLegMesh);
     this.group.add(this.rightLeg);
+
+    // Name tag
+    const nameCanvas = document.createElement("canvas");
+    nameCanvas.width = 128;
+    nameCanvas.height = 32;
+    const nctx = nameCanvas.getContext("2d")!;
+    nctx.fillStyle = "rgba(0,0,0,0.5)";
+    nctx.fillRect(0, 0, 128, 32);
+    nctx.fillStyle = "white";
+    nctx.font = "bold 16px monospace";
+    nctx.textAlign = "center";
+    nctx.fillText(this.name, 64, 22);
+    const nameTex = new THREE.CanvasTexture(nameCanvas);
+    const nameMat = new THREE.SpriteMaterial({ map: nameTex, transparent: true });
+    const nameTag = new THREE.Sprite(nameMat);
+    nameTag.scale.set(1.2, 0.3, 1);
+    nameTag.position.y = 2.1;
+    this.group.add(nameTag);
 
     this.pickNewDirection();
   }

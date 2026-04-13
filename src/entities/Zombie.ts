@@ -86,7 +86,7 @@ export class Zombie {
     this.group.add(this.rightLeg);
   }
 
-  update(dt: number, playerPos: THREE.Vector3): void {
+  update(dt: number, playerPos: THREE.Vector3, playerHidden = false): void {
     if (this.isDead) {
       this.deathTimer += dt;
       this.group.rotation.z = Math.min(this.deathTimer * 3, Math.PI / 2);
@@ -113,19 +113,28 @@ export class Zombie {
     const dz = playerPos.z - this.position.z;
     const dist = Math.sqrt(dx * dx + dz * dz);
 
-    if (dist < 30) {
-      // Face and move toward player
+    if (dist < 30 && !playerHidden) {
+      // Chase player
       this.currentYaw = Math.atan2(dx, dz);
       const speed = 1.8;
       this.position.x += (dx / dist) * speed * dt;
       this.position.z += (dz / dist) * speed * dt;
 
-      // Collision with terrain
       if (this.checkCollision()) {
         this.position.x -= (dx / dist) * speed * dt;
         this.position.z -= (dz / dist) * speed * dt;
-        // Try to jump over
         this.velocity.y = 6;
+      }
+    } else {
+      // Wander aimlessly when can't see player
+      this.currentYaw += (Math.random() - 0.5) * dt * 2;
+      const speed = 0.6;
+      this.position.x += Math.sin(this.currentYaw) * speed * dt;
+      this.position.z += Math.cos(this.currentYaw) * speed * dt;
+      if (this.checkCollision()) {
+        this.position.x -= Math.sin(this.currentYaw) * speed * dt;
+        this.position.z -= Math.cos(this.currentYaw) * speed * dt;
+        this.currentYaw += Math.PI;
       }
     }
 

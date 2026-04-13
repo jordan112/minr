@@ -18,7 +18,7 @@ export class InputManager {
       if (["Space", "KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Tab"].includes(e.code)) {
         e.preventDefault();
       }
-      if (e.code === "KeyB") this._placeClick = true;
+      if (e.code === "KeyB" || e.code === "KeyE") this._placeClick = true;
     });
 
     document.addEventListener("keyup", (e) => {
