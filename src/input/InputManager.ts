@@ -13,7 +13,7 @@ export class InputManager {
     document.addEventListener("keydown", (e) => {
       this.keys.set(e.code, true);
       // Prevent default for game keys
-      if (["Space", "KeyW", "KeyA", "KeyS", "KeyD", "Tab"].includes(e.code)) {
+      if (["Space", "KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Tab"].includes(e.code)) {
         e.preventDefault();
       }
     });

@@ -125,11 +125,12 @@ export class HUD {
       cursor: "pointer",
       zIndex: "200",
     });
-    overlay.textContent = "Click to play";
+    overlay.innerHTML = "Click to play<br><span style='font-size:14px;margin-top:12px;display:block;opacity:0.7'>WASD — move &nbsp; Space — jump &nbsp; V — toggle camera<br>Left click — break &nbsp; Right click — place &nbsp; 1-6 — select block<br>M — toggle music &nbsp; F3 — debug</span>";
     document.body.appendChild(overlay);
 
     overlay.addEventListener("click", () => {
       overlay.style.display = "none";
+      this.onPlay?.();
     });
 
     document.addEventListener("pointerlockchange", () => {
@@ -140,6 +141,7 @@ export class HUD {
   }
 
   onBlockSelect?: (index: number) => void;
+  onPlay?: () => void;
 
   update(player: Player, dt: number): void {
     // FPS counter

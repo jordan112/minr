@@ -9,6 +9,7 @@ import { VoxelRaycaster } from "./player/Raycaster";
 import { HUD } from "./ui/HUD";
 import { BlockId, PLACEABLE_BLOCKS } from "./world/BlockType";
 import { PLAYER_HEIGHT } from "./utils/constants";
+import { SoundManager } from "./audio/SoundManager";
 
 // --- Init ---
 const canvas = document.getElementById("game") as HTMLCanvasElement;
@@ -17,19 +18,33 @@ const textureManager = new TextureManager();
 const world = new World(sceneManager.scene, textureManager);
 const player = new Player();
 const input = new InputManager(canvas);
-const controller = new PlayerController(player, sceneManager.camera, input, world);
+const controller = new PlayerController(player, sceneManager.camera, input, world, sceneManager.scene);
 const raycaster = new VoxelRaycaster(world, sceneManager.scene);
 const hud = new HUD();
+const sound = new SoundManager();
 
 // Block selection
 hud.onBlockSelect = (index) => {
   player.selectedBlockIndex = index;
+};
+hud.onPlay = () => {
+  sound.startMusic();
 };
 
 document.addEventListener("keydown", (e) => {
   const num = parseInt(e.key);
   if (num >= 1 && num <= PLACEABLE_BLOCKS.length) {
     player.selectedBlockIndex = num - 1;
+  }
+
+  // Toggle 1st/3rd person with V
+  if (e.code === "KeyV") {
+    controller.toggleCamera();
+  }
+
+  // Toggle music with M
+  if (e.code === "KeyM") {
+    sound.toggleMusic();
   }
 });
 
@@ -41,21 +56,26 @@ function gameLoop(now: number) {
 
   const dt = (now - lastTime) / 1000;
   lastTime = now;
-  if (dt <= 0 || dt > 0.5) return; // skip weird frames
+  if (dt <= 0 || dt > 0.5) return;
 
   // Update systems
   controller.update(dt);
   world.update(player.position.x, player.position.z);
 
-  // Raycasting for block highlight
-  const lookDir = new THREE.Vector3();
-  sceneManager.camera.getWorldDirection(lookDir);
-  raycaster.update(sceneManager.camera.position, lookDir);
+  // Raycasting from the player's eye (not camera), so it works in both modes
+  const rayOrigin = controller.getRayOrigin();
+  const lookDir = controller.getLookDirection();
+  raycaster.update(rayOrigin, lookDir);
+
+  // Sound: footsteps and jump
+  sound.updateFootsteps(dt, controller.isMoving, player.isGrounded);
+  if (controller.justJumped) sound.playJump();
 
   // Block interaction
   if (input.leftClick && raycaster.lastHit) {
     const [bx, by, bz] = raycaster.lastHit.blockPos;
     world.setBlock(bx, by, bz, BlockId.AIR);
+    sound.playBlockBreak();
   }
 
   if (input.rightClick && raycaster.lastHit) {
@@ -65,7 +85,6 @@ function gameLoop(now: number) {
     const placeY = by + ny;
     const placeZ = bz + nz;
 
-    // Don't place block inside the player
     const px = player.position.x;
     const py = player.position.y;
     const pz = player.position.z;
@@ -76,6 +95,7 @@ function gameLoop(now: number) {
 
     if (!playerOverlaps) {
       world.setBlock(placeX, placeY, placeZ, PLACEABLE_BLOCKS[player.selectedBlockIndex]!);
+      sound.playBlockPlace();
     }
   }
 
