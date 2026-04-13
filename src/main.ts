@@ -114,6 +114,7 @@ document.addEventListener("keydown", (e) => {
 
 // --- Game Loop ---
 let lastTime = performance.now();
+let placeCooldown = 0;
 
 function gameLoop(now: number) {
   requestAnimationFrame(gameLoop);
@@ -121,6 +122,8 @@ function gameLoop(now: number) {
   const dt = (now - lastTime) / 1000;
   lastTime = now;
   if (dt <= 0 || dt > 0.5) return;
+
+  placeCooldown -= dt;
 
   // Update systems
   controller.update(dt);
@@ -229,8 +232,10 @@ function gameLoop(now: number) {
     fishingGame.cancelFishing();
   }
 
-  // Right click: place block
-  if (input.rightClick && raycaster.lastHit) {
+  // Place block: right-click OR B key (one-shot via placeCooldown)
+  const wantsPlace = input.rightClick || input.isKeyDown("KeyB");
+  if (wantsPlace && raycaster.lastHit && placeCooldown <= 0) {
+    placeCooldown = 0.2; // 200ms cooldown to prevent spam
     const [bx, by, bz] = raycaster.lastHit.blockPos;
     const [nx, ny, nz] = raycaster.lastHit.faceNormal;
     const placeX = bx + nx;
