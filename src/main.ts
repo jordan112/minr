@@ -90,6 +90,25 @@ document.addEventListener("keydown", (e) => {
   if (e.code === "KeyM") {
     sound.toggleMusic();
   }
+
+  // F to cast fishing rod (shortcut)
+  if (e.code === "KeyF") {
+    // Auto-equip fishing rod
+    currentTool = ToolType.FISHING_ROD;
+    controller.playerModel.setTool(currentTool);
+    hud.setTool(currentTool);
+    // Cast if looking at water
+    if (fishingGame.state === "idle" && raycaster.lastWaterHit) {
+      fishingGame.startFishing();
+      controller.playerModel.triggerSwing();
+    }
+  }
+
+  // R to reset position
+  if (e.code === "KeyR") {
+    player.position.set(0, 80, 0);
+    player.velocity.set(0, 0, 0);
+  }
 });
 
 // --- Game Loop ---
@@ -156,14 +175,11 @@ function gameLoop(now: number) {
     if (currentTool === ToolType.FISHING_ROD) {
       // Fishing rod: cast or interact with mini-game
       if (fishingGame.state === "idle") {
-        // Check if looking at water
-        if (raycaster.lastHit) {
-          const [bx, by, bz] = raycaster.lastHit.blockPos;
-          const block = world.getBlock(bx, by, bz);
-          if (block === BlockId.WATER) {
-            fishingGame.startFishing();
-            controller.playerModel.triggerSwing();
-          }
+        // Check if looking at water (use water-detecting raycast)
+        if (raycaster.lastWaterHit) {
+          fishingGame.startFishing();
+          controller.playerModel.triggerSwing();
+          sound.playSplash();
         }
       } else if (fishingGame.state === "bite" || fishingGame.state === "reeling") {
         fishingGame.onMouseDown();

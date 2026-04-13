@@ -13,6 +13,7 @@ export class VoxelRaycaster {
   private highlightMesh: THREE.LineSegments;
   private scene: THREE.Scene;
   lastHit: RaycastHit | null = null;
+  lastWaterHit: RaycastHit | null = null;
 
   constructor(world: World, scene: THREE.Scene) {
     this.world = world;
@@ -30,7 +31,8 @@ export class VoxelRaycaster {
   }
 
   update(origin: THREE.Vector3, direction: THREE.Vector3): void {
-    this.lastHit = this.cast(origin, direction);
+    this.lastHit = this.cast(origin, direction, false);
+    this.lastWaterHit = this.cast(origin, direction, true);
 
     if (this.lastHit) {
       const [bx, by, bz] = this.lastHit.blockPos;
@@ -42,7 +44,7 @@ export class VoxelRaycaster {
   }
 
   // DDA voxel traversal (Amanatides & Woo)
-  private cast(origin: THREE.Vector3, direction: THREE.Vector3): RaycastHit | null {
+  private cast(origin: THREE.Vector3, direction: THREE.Vector3, detectWater: boolean): RaycastHit | null {
     let x = Math.floor(origin.x);
     let y = Math.floor(origin.y);
     let z = Math.floor(origin.z);
@@ -70,6 +72,9 @@ export class VoxelRaycaster {
     for (let i = 0; i < MAX_RAY_DISTANCE * 3; i++) {
       const block = this.world.getBlock(x, y, z);
       if (isSolid(block)) {
+        return { blockPos: [x, y, z], faceNormal };
+      }
+      if (detectWater && block === BlockId.WATER) {
         return { blockPos: [x, y, z], faceNormal };
       }
 

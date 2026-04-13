@@ -85,6 +85,7 @@ export class World {
       const dz = Math.abs(chunk.chunkZ - pcz);
       if (dx > unloadDist || dz > unloadDist) {
         if (chunk.mesh) this.scene.remove(chunk.mesh);
+        if (chunk.waterMesh) this.scene.remove(chunk.waterMesh);
         this.chunks.delete(k);
       }
     }
@@ -101,27 +102,38 @@ export class World {
   }
 
   private remeshChunk(chunk: Chunk): void {
-    // Remove old mesh
+    // Remove old meshes
     if (chunk.mesh) {
       this.scene.remove(chunk.mesh);
       chunk.mesh.geometry.dispose();
       chunk.mesh = null;
+    }
+    if (chunk.waterMesh) {
+      this.scene.remove(chunk.waterMesh);
+      chunk.waterMesh.geometry.dispose();
+      chunk.waterMesh = null;
     }
 
     const neighborGetter = (wx: number, wy: number, wz: number): BlockId => {
       return this.getBlock(wx, wy, wz);
     };
 
-    const geometry = buildChunkMesh(chunk, this.textureManager, neighborGetter);
-    if (geometry) {
-      const mesh = new THREE.Mesh(geometry, this.textureManager.material);
-      mesh.position.set(
-        chunk.chunkX * CHUNK_SIZE,
-        0,
-        chunk.chunkZ * CHUNK_SIZE
-      );
+    const result = buildChunkMesh(chunk, this.textureManager, neighborGetter);
+    const pos = [chunk.chunkX * CHUNK_SIZE, 0, chunk.chunkZ * CHUNK_SIZE] as const;
+
+    if (result.solid) {
+      const mesh = new THREE.Mesh(result.solid, this.textureManager.material);
+      mesh.position.set(...pos);
       this.scene.add(mesh);
       chunk.mesh = mesh;
+    }
+
+    if (result.water) {
+      const waterMesh = new THREE.Mesh(result.water, this.textureManager.waterMaterial);
+      waterMesh.position.set(...pos);
+      waterMesh.renderOrder = 1; // render after solid
+      this.scene.add(waterMesh);
+      chunk.waterMesh = waterMesh;
     }
 
     chunk.isDirty = false;

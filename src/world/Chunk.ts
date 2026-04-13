@@ -7,6 +7,7 @@ export class Chunk {
   readonly chunkZ: number;
   readonly blocks: Uint8Array;
   mesh: THREE.Mesh | null = null;
+  waterMesh: THREE.Mesh | null = null;
   isDirty = true;
 
   constructor(chunkX: number, chunkZ: number) {

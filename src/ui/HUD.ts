@@ -221,11 +221,12 @@ export class HUD {
       <div style="font-size:13px;opacity:0.8;line-height:2.2;text-align:left;max-width:420px">
         <b>MOVE:</b> WASD / Arrows &nbsp;&nbsp; <b>JUMP:</b> Space<br>
         <b>CAMERA:</b> V to toggle 1st/3rd person<br>
-        <b>BUILD:</b> Right-click to place blocks (1-6 to pick type)<br>
-        <b>BREAK:</b> Left-click to break blocks or attack<br>
+        <b style="color:#66ff66">BUILD:</b> Right-click places blocks &nbsp; 1-6 picks block type<br>
+        <b>BREAK:</b> Left-click breaks blocks or attacks<br>
         <b>TOOLS:</b> Tab / Q to cycle (Hand, Pick, Axe, Sword, Rod)<br>
-        <b>FISH:</b> Equip Rod, left-click on water to cast<br>
-        <b>MUSIC:</b> M to toggle &nbsp;&nbsp; <b>DEBUG:</b> F3
+        <b>FISH:</b> Press F near water to cast &nbsp; Hold click to reel<br>
+        <b>RESET:</b> R to teleport home<br>
+        <b>MUSIC:</b> M &nbsp;&nbsp; <b>DEBUG:</b> F3
       </div>
     `;
     document.body.appendChild(overlay);

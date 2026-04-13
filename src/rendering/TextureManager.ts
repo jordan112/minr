@@ -52,7 +52,17 @@ export class TextureManager {
     this.atlas.colorSpace = THREE.SRGBColorSpace;
 
     this.material = new THREE.MeshLambertMaterial({ map: this.atlas });
+
+    // Separate transparent material for water
+    this.waterMaterial = new THREE.MeshLambertMaterial({
+      map: this.atlas,
+      transparent: true,
+      opacity: 0.55,
+      side: THREE.DoubleSide,
+    });
   }
+
+  waterMaterial!: THREE.MeshLambertMaterial;
 
   private addNoise(
     ctx: CanvasRenderingContext2D,
