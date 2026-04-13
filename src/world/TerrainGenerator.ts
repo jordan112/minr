@@ -31,18 +31,18 @@ export class TerrainGenerator {
         const wx = worldX + x;
         const wz = worldZ + z;
 
-        // Multi-octave noise for height — mostly flat with gentle rolls
+        // Multi-octave noise for height — mostly flat, sits ABOVE water
         let baseHeight =
-          SEA_LEVEL +
-          this.noise2D(wx / 300, wz / 300) * 4 +
+          SEA_LEVEL + 3 +
+          this.noise2D(wx / 300, wz / 300) * 3 +
           this.noise2D(wx / 100, wz / 100) * 2 +
           this.noise2D(wx / 50, wz / 50) * 1;
 
-        // Lake/pond carving — use separate noise to cut deeper depressions
-        const lakeNoise = this.noise2D(wx / 60 + 500, wz / 60 + 500);
-        if (lakeNoise < -0.3) {
-          // Carve deeper — creates lakes 3-5 blocks deep
-          const depth = (-lakeNoise - 0.3) * 12;
+        // Occasional small lakes — rare and contained
+        const lakeNoise = this.noise2D(wx / 40 + 500, wz / 40 + 500);
+        if (lakeNoise < -0.55) {
+          // Only deep carving in small pockets
+          const depth = (-lakeNoise - 0.55) * 15;
           baseHeight -= depth;
         }
 
@@ -50,7 +50,7 @@ export class TerrainGenerator {
 
         const clampedHeight = Math.max(1, Math.min(WORLD_HEIGHT - 1, height));
 
-        // Water level — at SEA_LEVEL so any dip creates ponds
+        // Water fills only below sea level — most terrain is above this
         const waterLevel = SEA_LEVEL;
 
         for (let y = 0; y <= Math.max(clampedHeight, waterLevel); y++) {

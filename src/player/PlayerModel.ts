@@ -123,8 +123,8 @@ export class PlayerModel {
 
     // Pickaxe
     const pickGroup = new THREE.Group();
-    pickGroup.position.set(0, -0.65, 0.2);
-    pickGroup.rotation.x = -0.8;
+    pickGroup.position.set(0, -0.6, -0.15);
+    pickGroup.rotation.x = 0.5;
     pickGroup.rotation.z = 0.1;
 
     const pickHandle = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.8, 0.08), handleMat);
@@ -144,8 +144,8 @@ export class PlayerModel {
 
     // Axe
     const axeGroup = new THREE.Group();
-    axeGroup.position.set(0, -0.65, 0.2);
-    axeGroup.rotation.x = -0.8;
+    axeGroup.position.set(0, -0.6, -0.15);
+    axeGroup.rotation.x = 0.5;
     axeGroup.rotation.z = 0.1;
 
     const axeHandle = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.8, 0.08), handleMat);
@@ -166,8 +166,8 @@ export class PlayerModel {
 
     // Sword
     const swordGroup = new THREE.Group();
-    swordGroup.position.set(0, -0.65, 0.2);
-    swordGroup.rotation.x = -0.8;
+    swordGroup.position.set(0, -0.6, -0.15);
+    swordGroup.rotation.x = 0.5;
     swordGroup.rotation.z = 0.1;
 
     // Sword handle
@@ -195,8 +195,8 @@ export class PlayerModel {
 
     // Fishing Rod
     const rodGroup = new THREE.Group();
-    rodGroup.position.set(0, -0.65, 0.2);
-    rodGroup.rotation.x = -1.0;
+    rodGroup.position.set(0, -0.6, -0.15);
+    rodGroup.rotation.x = 0.3;
     rodGroup.rotation.z = 0.1;
 
     // Rod pole (long thin stick)

@@ -216,13 +216,16 @@ export class HUD {
       zIndex: "200",
     });
     overlay.innerHTML = `
-      <div style="margin-bottom:20px;font-weight:bold">MINR</div>
-      <div style="font-size:18px;margin-bottom:16px">Click to play</div>
-      <div style="font-size:13px;opacity:0.7;line-height:2;text-align:center">
-        WASD / Arrows — move &nbsp;&nbsp; Space — jump &nbsp;&nbsp; V — camera<br>
-        Left click — break/attack &nbsp;&nbsp; Right click — place block<br>
-        Tab / Q — cycle tools &nbsp;&nbsp; 1-6 — select block<br>
-        M — toggle music &nbsp;&nbsp; F3 — debug
+      <div style="margin-bottom:20px;font-weight:bold;font-size:36px">MINR</div>
+      <div style="font-size:18px;margin-bottom:20px">Click to play</div>
+      <div style="font-size:13px;opacity:0.8;line-height:2.2;text-align:left;max-width:420px">
+        <b>MOVE:</b> WASD / Arrows &nbsp;&nbsp; <b>JUMP:</b> Space<br>
+        <b>CAMERA:</b> V to toggle 1st/3rd person<br>
+        <b>BUILD:</b> Right-click to place blocks (1-6 to pick type)<br>
+        <b>BREAK:</b> Left-click to break blocks or attack<br>
+        <b>TOOLS:</b> Tab / Q to cycle (Hand, Pick, Axe, Sword, Rod)<br>
+        <b>FISH:</b> Equip Rod, left-click on water to cast<br>
+        <b>MUSIC:</b> M to toggle &nbsp;&nbsp; <b>DEBUG:</b> F3
       </div>
     `;
     document.body.appendChild(overlay);

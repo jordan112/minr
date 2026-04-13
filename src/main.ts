@@ -14,6 +14,7 @@ import { AnimalManager } from "./entities/AnimalManager";
 import { ToolType, ALL_TOOLS, getToolDef } from "./player/ToolSystem";
 import { AquaticManager } from "./entities/AquaticManager";
 import { FishingGame } from "./ui/FishingGame";
+import { SignManager } from "./entities/SignManager";
 
 // --- Init ---
 const canvas = document.getElementById("game") as HTMLCanvasElement;
@@ -30,9 +31,10 @@ const animals = new AnimalManager(sceneManager.scene, world);
 const aquatics = new AquaticManager(sceneManager.scene, world);
 const fishingGame = new FishingGame();
 
+const signs = new SignManager(sceneManager.scene, world);
+
 fishingGame.onCatch = (fishName) => {
   console.log("Caught:", fishName);
-  // Could add inventory here later
 };
 
 // Block selection
@@ -109,9 +111,24 @@ function gameLoop(now: number) {
   const lookDir = controller.getLookDirection();
   raycaster.update(rayOrigin, lookDir);
 
-  // Update animals and aquatic creatures
+  // Update animals, aquatic creatures, and signs
   animals.update(dt, player.position.x, player.position.z);
   aquatics.update(dt, player.position.x, player.position.z);
+  signs.update(dt, player.position.x, player.position.z);
+
+  // Animal sounds
+  for (const animal of animals.getAnimals()) {
+    if (animal.wantsToSpeak && !animal.isDead) {
+      // Only play if close enough to hear
+      const dx = animal.position.x - player.position.x;
+      const dz = animal.position.z - player.position.z;
+      if (dx * dx + dz * dz < 30 * 30) {
+        if (animal.type === "cow") sound.playCow();
+        else if (animal.type === "pig") sound.playPig();
+        else if (animal.type === "sheep") sound.playSheep();
+      }
+    }
+  }
 
   // Player-animal collision (push player away from animals)
   for (const animal of animals.getAnimals()) {

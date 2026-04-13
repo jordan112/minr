@@ -183,6 +183,129 @@ export class SoundManager {
     osc.stop(now + 0.2);
   }
 
+  // --- Animal Sounds ---
+
+  playCow(): void {
+    const ctx = this.getCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    // "Moo" — low frequency sweep up then down
+    const osc = ctx.createOscillator();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(120, now);
+    osc.frequency.linearRampToValueAtTime(180, now + 0.3);
+    osc.frequency.linearRampToValueAtTime(130, now + 0.8);
+    osc.frequency.linearRampToValueAtTime(100, now + 1.0);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.15, now + 0.1);
+    gain.gain.setValueAtTime(0.15, now + 0.6);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.value = 400;
+
+    osc.connect(gain).connect(filter).connect(this.sfxGain);
+    osc.start(now);
+    osc.stop(now + 1.0);
+  }
+
+  playPig(): void {
+    const ctx = this.getCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    // "Oink" — short nasal burst
+    for (let i = 0; i < 2; i++) {
+      const t = now + i * 0.2;
+      const osc = ctx.createOscillator();
+      osc.type = "square";
+      osc.frequency.setValueAtTime(250 + Math.random() * 50, t);
+      osc.frequency.exponentialRampToValueAtTime(180, t + 0.12);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.001, t);
+      gain.gain.linearRampToValueAtTime(0.12, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = "bandpass";
+      filter.frequency.value = 500;
+      filter.Q.value = 3;
+
+      osc.connect(filter).connect(gain).connect(this.sfxGain);
+      osc.start(t);
+      osc.stop(t + 0.15);
+    }
+  }
+
+  playSheep(): void {
+    const ctx = this.getCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    // "Baa" — vibrato tone
+    const osc = ctx.createOscillator();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(300, now);
+    osc.frequency.linearRampToValueAtTime(350, now + 0.15);
+    osc.frequency.linearRampToValueAtTime(280, now + 0.5);
+
+    // Vibrato
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = 8;
+    const lfoGain = ctx.createGain();
+    lfoGain.gain.value = 15;
+    lfo.connect(lfoGain).connect(osc.frequency);
+    lfo.start(now);
+    lfo.stop(now + 0.5);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.1, now + 0.05);
+    gain.gain.setValueAtTime(0.1, now + 0.3);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.value = 600;
+    filter.Q.value = 2;
+
+    osc.connect(gain).connect(filter).connect(this.sfxGain);
+    osc.start(now);
+    osc.stop(now + 0.5);
+  }
+
+  playSplash(): void {
+    const ctx = this.getCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    const bufSize = Math.floor(ctx.sampleRate * 0.3);
+    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufSize * 0.3));
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.value = 1500;
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+    src.connect(filter).connect(gain).connect(this.sfxGain);
+    src.start(now);
+    src.stop(now + 0.3);
+  }
+
   updateFootsteps(dt: number, isMoving: boolean, isGrounded: boolean): void {
     this.footstepCooldown -= dt;
     if (isMoving && isGrounded && this.footstepCooldown <= 0) {

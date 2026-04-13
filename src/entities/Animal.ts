@@ -106,6 +106,8 @@ export class Animal {
   private hurtTimer = 0;
   private deathTimer = 0;
   private originalMaterials: THREE.MeshLambertMaterial[] = [];
+  soundTimer = 5 + Math.random() * 10;
+  wantsToSpeak = false;
 
   constructor(type: AnimalType, world: World, x: number, y: number, z: number) {
     this.type = type;
@@ -180,6 +182,14 @@ export class Animal {
   }
 
   update(dt: number): void {
+    // Animal ambient sound
+    this.wantsToSpeak = false;
+    this.soundTimer -= dt;
+    if (this.soundTimer <= 0) {
+      this.soundTimer = 8 + Math.random() * 15;
+      this.wantsToSpeak = true;
+    }
+
     // AI: alternate between moving and idling
     if (this.isMoving) {
       this.moveTimer -= dt;
