@@ -5,6 +5,7 @@ export class InputManager {
   private _leftClick = false;
   private _rightClick = false;
   private _leftHeld = false;
+  private _placeClick = false; // B key one-shot
   isPointerLocked = false;
   private canvas: HTMLCanvasElement;
 
@@ -17,6 +18,7 @@ export class InputManager {
       if (["Space", "KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Tab"].includes(e.code)) {
         e.preventDefault();
       }
+      if (e.code === "KeyB") this._placeClick = true;
     });
 
     document.addEventListener("keyup", (e) => {
@@ -58,11 +60,13 @@ export class InputManager {
   get leftClick(): boolean { return this._leftClick; }
   get leftHeld(): boolean { return this._leftHeld; }
   get rightClick(): boolean { return this._rightClick; }
+  get placeClick(): boolean { return this._placeClick; }
 
   resetFrame(): void {
     this._mouseDX = 0;
     this._mouseDY = 0;
     this._leftClick = false;
     this._rightClick = false;
+    this._placeClick = false;
   }
 }

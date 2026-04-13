@@ -17,6 +17,7 @@ import { FishingGame } from "./ui/FishingGame";
 import { SignManager } from "./entities/SignManager";
 import { Villager } from "./entities/Villager";
 import { Zombie } from "./entities/Zombie";
+import { RareCreature, ALL_RARE_TYPES } from "./entities/RareCreature";
 
 // --- Init ---
 const canvas = document.getElementById("game") as HTMLCanvasElement;
@@ -52,8 +53,13 @@ spawnVillagers();
 // Zombie enemies
 const zombies: Zombie[] = [];
 let zombieSpawnTimer = 5;
-let dayTime = 0; // 0-1 day cycle, 0.5 = noon, 0 = midnight
-const DAY_LENGTH = 120; // 2 minutes per full day
+let dayTime = 0.25; // start at sunrise
+const DAY_LENGTH = 120;
+let isPaused = false;
+
+// Rare creatures
+const rareCreatures: RareCreature[] = [];
+let rareSpawnTimer = 30;
 
 fishingGame.onCatch = (fishName) => {
   console.log("Caught:", fishName);
@@ -127,6 +133,11 @@ document.addEventListener("keydown", (e) => {
     sound.playSplash();
   }
 
+  // P or Escape to pause
+  if (e.code === "KeyP" || e.code === "Escape") {
+    isPaused = !isPaused;
+  }
+
   // R to reset position
   if (e.code === "KeyR") {
     player.position.set(0, 80, 0);
@@ -144,6 +155,12 @@ function gameLoop(now: number) {
   const dt = (now - lastTime) / 1000;
   lastTime = now;
   if (dt <= 0 || dt > 0.5) return;
+
+  if (isPaused) {
+    input.resetFrame();
+    sceneManager.render();
+    return;
+  }
 
   placeCooldown -= dt;
 
@@ -183,6 +200,12 @@ function gameLoop(now: number) {
 
   // Player hurt cooldown
   player.hurtCooldown -= dt;
+
+  // Passive health regen when not recently hurt
+  if (player.hurtCooldown <= -3 && player.health < player.maxHealth) {
+    player.heal(1);
+    player.hurtCooldown = -2; // reset regen timer
+  }
 
   // Lava damage
   const blockAtFeet = world.getBlock(
@@ -260,6 +283,60 @@ function gameLoop(now: number) {
       if (dist > 60) {
         sceneManager.scene.remove(z.group);
         zombies.splice(i, 1);
+      }
+    }
+  }
+
+  // Rare creature spawning
+  rareSpawnTimer -= dt;
+  if (rareSpawnTimer <= 0 && rareCreatures.length < 3) {
+    rareSpawnTimer = 40 + Math.random() * 40;
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 20 + Math.random() * 25;
+    const rx = player.position.x + Math.cos(angle) * dist;
+    const rz = player.position.z + Math.sin(angle) * dist;
+    let ry = -1;
+    for (let y = 80; y >= 1; y--) {
+      if (isSolid(world.getBlock(Math.floor(rx), y, Math.floor(rz)))) { ry = y + 1; break; }
+    }
+    if (ry > 0) {
+      const type = ALL_RARE_TYPES[Math.floor(Math.random() * ALL_RARE_TYPES.length)]!;
+      const rc = new RareCreature(type, world, rx, ry, rz);
+      rareCreatures.push(rc);
+      sceneManager.scene.add(rc.group);
+    }
+  }
+
+  // Update rare creatures
+  for (let i = rareCreatures.length - 1; i >= 0; i--) {
+    const rc = rareCreatures[i]!;
+    rc.update(dt, player.position);
+
+    if (rc.isDead && !rc.group.visible) {
+      sceneManager.scene.remove(rc.group);
+      rareCreatures.splice(i, 1);
+      continue;
+    }
+
+    if (!rc.isDead) {
+      const dx = rc.position.x - player.position.x;
+      const dz = rc.position.z - player.position.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      // Attack
+      if (dist < 2 && rc.canAttack()) {
+        const dmg = rc.doAttack();
+        player.takeDamage(dmg);
+      }
+      // Collision push
+      if (dist < rc.radius && dist > 0.01) {
+        const push = (rc.radius - dist) / dist;
+        player.position.x -= dx * push;
+        player.position.z -= dz * push;
+      }
+      // Despawn far
+      if (dist > 80) {
+        sceneManager.scene.remove(rc.group);
+        rareCreatures.splice(i, 1);
       }
     }
   }
@@ -351,7 +428,23 @@ function gameLoop(now: number) {
         if (zd < zombieDist) { zombieDist = zd; zombieTarget = z; }
       }
 
-      if (zombieTarget) {
+      // Check rare creatures
+      let rareTarget: RareCreature | null = null;
+      let rareDist = 3 * 3;
+      for (const rc of rareCreatures) {
+        if (rc.isDead) continue;
+        const rdx = rc.position.x - attackPoint.x;
+        const rdy = rc.position.y - attackPoint.y;
+        const rdz = rc.position.z - attackPoint.z;
+        const rd = rdx * rdx + rdy * rdy + rdz * rdz;
+        if (rd < rareDist) { rareDist = rd; rareTarget = rc; }
+      }
+
+      if (rareTarget) {
+        rareTarget.takeDamage(toolDef.damage);
+        controller.playerModel.triggerSwing();
+        sound.playBlockBreak();
+      } else if (zombieTarget) {
         zombieTarget.takeDamage(toolDef.damage);
         controller.playerModel.triggerSwing();
         sound.playBlockBreak();
@@ -386,10 +479,9 @@ function gameLoop(now: number) {
     fishingGame.cancelFishing();
   }
 
-  // Place block: right-click OR B key (one-shot via placeCooldown)
-  const wantsPlace = input.rightClick || input.isKeyDown("KeyB");
-  if (wantsPlace && raycaster.lastHit && placeCooldown <= 0) {
-    placeCooldown = 0.2; // 200ms cooldown to prevent spam
+  // Place block: right-click OR B key
+  const wantsPlace = input.rightClick || input.placeClick;
+  if (wantsPlace && raycaster.lastHit) {
     const [bx, by, bz] = raycaster.lastHit.blockPos;
     const [nx, ny, nz] = raycaster.lastHit.faceNormal;
     const placeX = bx + nx;

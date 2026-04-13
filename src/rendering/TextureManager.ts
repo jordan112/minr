@@ -27,6 +27,7 @@ export class TextureManager {
     for (const blockId of [
       BlockId.GRASS, BlockId.DIRT, BlockId.STONE, BlockId.WOOD,
       BlockId.LEAVES, BlockId.SAND, BlockId.WATER, BlockId.BEDROCK,
+      BlockId.LAVA, BlockId.TORCH, BlockId.TNT,
     ]) {
       const def = getBlockDef(blockId);
       if (!def) continue;

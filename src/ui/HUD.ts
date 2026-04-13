@@ -288,7 +288,8 @@ export class HUD {
         <b>BREAK:</b> Left-click breaks blocks or attacks<br>
         <b>TOOLS:</b> Tab / Q to cycle (Hand, Pick, Axe, Sword, Rod)<br>
         <b>FISH:</b> F = equip rod &nbsp; C or Left-click = cast &nbsp; Hold click to reel<br>
-        <b>RESET:</b> R to teleport home<br>
+        <b>HEAL:</b> Stay safe for 3 seconds to auto-regen<br>
+        <b>RESET:</b> R to teleport home &nbsp;&nbsp; <b>PAUSE:</b> P<br>
         <b>MUSIC:</b> M &nbsp;&nbsp; <b>DEBUG:</b> F3
       </div>
     `;
