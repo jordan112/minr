@@ -610,8 +610,9 @@ function gameLoop(now: number) {
   // Update fishing mini-game
   fishingGame.update(dt);
 
-  // Left click: fishing, attack, or break
-  if (input.leftClick) {
+  // Left click: fishing, attack, or break — NEVER place
+  // Skip if B/E was pressed this frame (user wants to place, not break)
+  if (input.leftClick && !input.placeClick) {
     if (currentTool === ToolType.FISHING_ROD) {
       // Fishing rod: cast or interact with mini-game
       if (fishingGame.state === "idle") {
@@ -703,7 +704,27 @@ function gameLoop(now: number) {
         sound.playBlockBreak();
       } else if (raycaster.lastHit) {
         const [bx, by, bz] = raycaster.lastHit.blockPos;
-        world.setBlock(bx, by, bz, BlockId.AIR);
+        const hitBlock = world.getBlock(bx, by, bz);
+
+        if (hitBlock === BlockId.TNT) {
+          // TNT EXPLOSION! Destroy blocks in a radius
+          sound.playExplosion();
+          const radius = 4;
+          for (let dx = -radius; dx <= radius; dx++) {
+            for (let dy = -radius; dy <= radius; dy++) {
+              for (let dz = -radius; dz <= radius; dz++) {
+                if (dx*dx + dy*dy + dz*dz <= radius*radius) {
+                  const block = world.getBlock(bx+dx, by+dy, bz+dz);
+                  if (block !== BlockId.BEDROCK) {
+                    world.setBlock(bx+dx, by+dy, bz+dz, BlockId.AIR);
+                  }
+                }
+              }
+            }
+          }
+        } else {
+          world.setBlock(bx, by, bz, BlockId.AIR);
+        }
         controller.playerModel.triggerSwing();
         sound.playBlockBreak();
       }
@@ -832,6 +853,18 @@ function gameLoop(now: number) {
     const rdz = rc.position.z - player.position.z;
     if (rdx * rdx + rdz * rdz < 25 * 25 && Math.random() < dt * 0.05) {
       sound.playRoar();
+    }
+  }
+
+  // Whale blowhole sounds
+  for (const ac of aquatics.getCreatures()) {
+    if (ac.type === "whale" && ac.wantsBlowSound) {
+      ac.wantsBlowSound = false;
+      const dx = ac.position.x - player.position.x;
+      const dz = ac.position.z - player.position.z;
+      if (dx * dx + dz * dz < 40 * 40) {
+        sound.playWhaleBlow();
+      }
     }
   }
 

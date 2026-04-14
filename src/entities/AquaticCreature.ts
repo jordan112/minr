@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { World } from "../world/World";
 import { BlockId } from "../world/BlockType";
 
-export type AquaticType = "fish" | "shark" | "squid";
+export type AquaticType = "fish" | "shark" | "squid" | "whale";
 
 export class AquaticCreature {
   group: THREE.Group;
@@ -21,6 +21,10 @@ export class AquaticCreature {
   private isJumping = false;
   private tailGroup: THREE.Group | null = null;
   private tentacles: THREE.Group[] = [];
+  private blowhole: THREE.Points | null = null;
+  private blowholeTimer = 0;
+  private blowholeCooldown = 5 + Math.random() * 8;
+  wantsBlowSound = false;
 
   constructor(type: AquaticType, world: World, x: number, y: number, z: number) {
     this.type = type;
@@ -29,7 +33,7 @@ export class AquaticCreature {
     this.group = new THREE.Group();
     this.currentYaw = Math.random() * Math.PI * 2;
     this.targetYaw = this.currentYaw;
-    this.health = type === "shark" ? 20 : type === "squid" ? 30 : 5;
+    this.health = type === "whale" ? 100 : type === "shark" ? 20 : type === "squid" ? 30 : 5;
 
     this.buildModel();
     this.pickNewDirection();
@@ -40,6 +44,7 @@ export class AquaticCreature {
       case "fish": this.buildFish(); break;
       case "shark": this.buildShark(); break;
       case "squid": this.buildSquid(); break;
+      case "whale": this.buildWhale(); break;
     }
   }
 
@@ -202,6 +207,78 @@ export class AquaticCreature {
     this.group.add(rightFin);
   }
 
+  private buildWhale(): void {
+    const bodyMat = new THREE.MeshLambertMaterial({ color: 0x334466 });
+    const bellyMat = new THREE.MeshLambertMaterial({ color: 0x8899aa });
+    const eyeMat = new THREE.MeshLambertMaterial({ color: 0x111122 });
+
+    // Massive body
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.9, 3.0), bodyMat);
+    this.group.add(body);
+
+    // Belly (lighter underside)
+    const belly = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.3, 2.8), bellyMat);
+    belly.position.y = -0.35;
+    this.group.add(belly);
+
+    // Rounded head
+    const head = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.8, 0.8), bodyMat);
+    head.position.set(0, 0, 1.8);
+    this.group.add(head);
+
+    // Jaw
+    const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.25, 0.7), bellyMat);
+    jaw.position.set(0, -0.3, 1.75);
+    this.group.add(jaw);
+
+    // Eyes (small on a whale)
+    for (const s of [-1, 1]) {
+      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.08, 0.06), eyeMat);
+      eye.position.set(s * 0.55, 0.1, 1.6);
+      this.group.add(eye);
+    }
+
+    // Blowhole on top of head
+    const blowholeMark = new THREE.Mesh(
+      new THREE.BoxGeometry(0.15, 0.05, 0.15),
+      new THREE.MeshLambertMaterial({ color: 0x2a3a5a })
+    );
+    blowholeMark.position.set(0, 0.45, 1.4);
+    this.group.add(blowholeMark);
+
+    // Tail flukes (horizontal, like a real whale)
+    this.tailGroup = new THREE.Group();
+    this.tailGroup.position.z = -1.7;
+    const leftFluke = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.06, 0.4), bodyMat);
+    leftFluke.position.set(-0.3, 0, -0.1);
+    this.tailGroup.add(leftFluke);
+    const rightFluke = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.06, 0.4), bodyMat);
+    rightFluke.position.set(0.3, 0, -0.1);
+    this.tailGroup.add(rightFluke);
+    // Tail stock
+    const tailStock = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.6), bodyMat);
+    tailStock.position.set(0, 0, 0.2);
+    this.tailGroup.add(tailStock);
+    this.group.add(this.tailGroup);
+
+    // Pectoral fins
+    for (const s of [-1, 1]) {
+      const fin = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.06, 0.4), bodyMat);
+      fin.position.set(s * 0.75, -0.2, 0.5);
+      fin.rotation.z = s * -0.3;
+      this.group.add(fin);
+    }
+
+    // Create blowhole particle system
+    const sprayGeo = new THREE.BufferGeometry();
+    const sprayPositions = new Float32Array(30 * 3); // 30 particles
+    sprayGeo.setAttribute("position", new THREE.Float32BufferAttribute(sprayPositions, 3));
+    const sprayMat = new THREE.PointsMaterial({ color: 0xccddff, size: 0.3, transparent: true, opacity: 0.7 });
+    this.blowhole = new THREE.Points(sprayGeo, sprayMat);
+    this.blowhole.visible = false;
+    this.group.add(this.blowhole);
+  }
+
   private pickNewDirection(): void {
     this.targetYaw = Math.random() * Math.PI * 2;
     this.dirChangeTimer = 3 + Math.random() * 5;
@@ -217,6 +294,7 @@ export class AquaticCreature {
       case "fish": return 0.3;
       case "shark": return 0.8;
       case "squid": return 1.0;
+      case "whale": return 2.0;
     }
   }
 
@@ -268,7 +346,37 @@ export class AquaticCreature {
     this.currentYaw += yawDiff * Math.min(1, dt * 2);
 
     // Swimming speed varies by type
-    const speed = this.type === "shark" ? 2.5 : this.type === "squid" ? 1.5 : 1.8;
+    const speed = this.type === "whale" ? 1.2 : this.type === "shark" ? 2.5 : this.type === "squid" ? 1.5 : 1.8;
+
+    // Whale blowhole spray
+    if (this.type === "whale" && this.blowhole) {
+      this.blowholeCooldown -= dt;
+      if (this.blowholeCooldown <= 0) {
+        this.blowholeCooldown = 6 + Math.random() * 10;
+        this.blowholeTimer = 1.5; // spray lasts 1.5 seconds
+        this.blowhole.visible = true;
+        this.wantsBlowSound = true;
+      }
+      if (this.blowholeTimer > 0) {
+        this.blowholeTimer -= dt;
+        // Animate spray particles going up
+        const posAttr = this.blowhole.geometry.getAttribute("position") as THREE.BufferAttribute;
+        for (let i = 0; i < 30; i++) {
+          const t = this.blowholeTimer;
+          const spread = 0.3;
+          posAttr.setXYZ(i,
+            (Math.random() - 0.5) * spread,
+            1.0 + (1.5 - t) * 2.5 + Math.random() * 0.5, // spray goes up
+            1.4 + (Math.random() - 0.5) * spread
+          );
+        }
+        posAttr.needsUpdate = true;
+        // Fade out
+        (this.blowhole.material as THREE.PointsMaterial).opacity = Math.min(0.7, this.blowholeTimer * 0.7);
+      } else {
+        this.blowhole.visible = false;
+      }
+    }
 
     // Check if currently in water
     const blockAtPos = this.world.getBlock(
@@ -383,9 +491,10 @@ export class AquaticCreature {
 
   private getSwimDepth(): number {
     switch (this.type) {
-      case "fish": return 0.1; // swim right at the surface, visible from above
-      case "shark": return 0.3; // dorsal fin pokes out
+      case "fish": return 0.1;
+      case "shark": return 0.3;
       case "squid": return 0.8;
+      case "whale": return 0.2; // back/blowhole visible above water
     }
   }
 }

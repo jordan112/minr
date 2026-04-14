@@ -418,6 +418,82 @@ export class SoundManager {
     src.stop(now + 0.3);
   }
 
+  playWhaleBlow(): void {
+    const ctx = this.getCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    // Whale blowhole — breathy woosh with low rumble
+    const noiseBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 1.0), ctx.sampleRate);
+    const noiseData = noiseBuf.getChannelData(0);
+    for (let i = 0; i < noiseData.length; i++) {
+      noiseData[i] = (Math.random() * 2 - 1) * (1 - i / noiseData.length);
+    }
+    const noiseSrc = ctx.createBufferSource();
+    noiseSrc.buffer = noiseBuf;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.value = 400;
+    filter.Q.value = 0.5;
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.25, now + 0.15);
+    gain.gain.setValueAtTime(0.25, now + 0.5);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
+
+    noiseSrc.connect(filter).connect(gain).connect(this.sfxGain);
+    noiseSrc.start(now);
+    noiseSrc.stop(now + 1.0);
+
+    // Low rumble underneath
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.value = 60;
+    const oscGain = ctx.createGain();
+    oscGain.gain.setValueAtTime(0.1, now);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+    osc.connect(oscGain).connect(this.sfxGain);
+    osc.start(now);
+    osc.stop(now + 0.8);
+  }
+
+  playExplosion(): void {
+    const ctx = this.getCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    // Big boom — noise burst + low thud
+    const noiseBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.5), ctx.sampleRate);
+    const noiseData = noiseBuf.getChannelData(0);
+    for (let i = 0; i < noiseData.length; i++) {
+      noiseData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (noiseData.length * 0.15));
+    }
+    const noiseSrc = ctx.createBufferSource();
+    noiseSrc.buffer = noiseBuf;
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.6, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+    noiseSrc.connect(noiseGain).connect(this.sfxGain);
+    noiseSrc.start(now);
+    noiseSrc.stop(now + 0.5);
+
+    // Low boom
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(80, now);
+    osc.frequency.exponentialRampToValueAtTime(30, now + 0.3);
+    const oscGain = ctx.createGain();
+    oscGain.gain.setValueAtTime(0.5, now);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+    osc.connect(oscGain).connect(this.sfxGain);
+    osc.start(now);
+    osc.stop(now + 0.4);
+  }
+
   updateFootsteps(dt: number, isMoving: boolean, isGrounded: boolean): void {
     this.footstepCooldown -= dt;
     if (isMoving && isGrounded && this.footstepCooldown <= 0) {

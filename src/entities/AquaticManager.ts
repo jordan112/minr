@@ -90,12 +90,14 @@ export class AquaticManager {
     // Pick type based on rarity and water depth
     let type: AquaticType;
     const roll = Math.random();
-    if (roll < 0.03 && waterDepth >= 3) {
-      type = "squid"; // 3% chance, needs deep water
-    } else if (roll < 0.15 && waterDepth >= 2) {
-      type = "shark"; // 12% chance, needs some depth
+    if (roll < 0.02 && waterDepth >= 3) {
+      type = "whale"; // 2% chance, needs deep water
+    } else if (roll < 0.05 && waterDepth >= 3) {
+      type = "squid"; // 3% chance
+    } else if (roll < 0.17 && waterDepth >= 2) {
+      type = "shark"; // 12% chance
     } else {
-      type = "fish"; // 85% chance
+      type = "fish";
     }
 
     const creature = new AquaticCreature(type, this.world, x + 0.5, waterY, z + 0.5);
