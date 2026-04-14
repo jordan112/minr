@@ -6,6 +6,8 @@
  * 3. A marker bounces back and forth — click when it's in the GREEN zone
  * 4. Hit it 3 times to catch the fish. Miss = fish escapes.
  */
+import * as THREE from "three";
+
 export type FishingState = "idle" | "casting" | "waiting" | "bite" | "reeling" | "caught" | "lost";
 
 const FISH_NAMES = [
@@ -13,6 +15,8 @@ const FISH_NAMES = [
   "Golden Carp", "Pufferfish", "Swordfish", "Rainbow Fish",
   "Ancient Pike", "Glowing Eel", "Crystal Perch",
 ];
+
+const FISH_COLORS = [0xff6633, 0x33aaff, 0xffcc00, 0x33ff66, 0xff33aa, 0x66ddff, 0xff8844, 0xaaff44, 0xff44aa, 0x44ffaa, 0xcc88ff, 0x88ffcc];
 
 export class FishingGame {
   private overlay: HTMLDivElement;
@@ -35,8 +39,71 @@ export class FishingGame {
   private missesAllowed = 2;
   private missesSoFar = 0;
   private fishName = "";
+  private fishColorIndex = 0;
+
+  // 3D fish on the line
+  private scene: THREE.Scene | null = null;
+  private hookFish: THREE.Group | null = null;
+  private castPos = new THREE.Vector3();
+  private playerRef: { position: THREE.Vector3 } | null = null;
+  private catchAnimTime = 0;
+  totalCaught = 0;
+  caughtList: string[] = [];
 
   onCatch?: (fishName: string) => void;
+
+  setScene(scene: THREE.Scene, playerRef: { position: THREE.Vector3 }): void {
+    this.scene = scene;
+    this.playerRef = playerRef;
+  }
+
+  setCastPosition(pos: THREE.Vector3): void {
+    this.castPos.copy(pos);
+  }
+
+  private spawnHookFish(): void {
+    if (!this.scene) return;
+    this.removeHookFish();
+
+    const color = FISH_COLORS[this.fishColorIndex % FISH_COLORS.length]!;
+    const mat = new THREE.MeshLambertMaterial({ color });
+
+    this.hookFish = new THREE.Group();
+
+    // Fish body
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.25, 0.6), mat);
+    this.hookFish.add(body);
+
+    // Tail
+    const tail = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.25, 0.18), mat);
+    tail.position.z = -0.35;
+    this.hookFish.add(tail);
+
+    // Eye
+    const eyeMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+    const eye1 = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.03), eyeMat);
+    eye1.position.set(-0.16, 0.04, 0.2);
+    this.hookFish.add(eye1);
+    const eye2 = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.03), eyeMat);
+    eye2.position.set(0.16, 0.04, 0.2);
+    this.hookFish.add(eye2);
+
+    // Dorsal fin
+    const fin = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.1, 0.15), mat);
+    fin.position.set(0, 0.17, 0);
+    this.hookFish.add(fin);
+
+    this.hookFish.position.copy(this.castPos);
+    this.hookFish.position.y += 0.3;
+    this.scene.add(this.hookFish);
+  }
+
+  private removeHookFish(): void {
+    if (this.hookFish && this.scene) {
+      this.scene.remove(this.hookFish);
+      this.hookFish = null;
+    }
+  }
 
   constructor() {
     this.overlay = document.createElement("div");
@@ -188,8 +255,14 @@ export class FishingGame {
           this.statusText.style.color = "#66ff66";
           this.barContainer.style.display = "none";
           this.hitsDisplay.textContent = "";
+          this.totalCaught++;
+          this.caughtList.push(this.fishName);
+          this.catchAnimTime = 0;
           this.onCatch?.(this.fishName);
-          setTimeout(() => this.cancelFishing(), 2000);
+          setTimeout(() => {
+            this.removeHookFish();
+            this.cancelFishing();
+          }, 2000);
           return;
         }
 
@@ -209,6 +282,7 @@ export class FishingGame {
           this.statusText.style.color = "#ff6666";
           this.barContainer.style.display = "none";
           this.hitsDisplay.textContent = "";
+          this.removeHookFish();
           setTimeout(() => this.cancelFishing(), 1500);
           return;
         }
@@ -250,6 +324,9 @@ export class FishingGame {
         this.biteTimer = 2.0;
         this.statusText.textContent = "\ud83d\udc1f FISH ON! Click!";
         this.statusText.style.color = "#ffff00";
+        // Show fish splashing at cast position
+        this.fishColorIndex = Math.floor(Math.random() * FISH_COLORS.length);
+        this.spawnHookFish();
       }
     }
 
@@ -262,7 +339,35 @@ export class FishingGame {
         this.statusText.textContent = "Too slow! Fish escaped.";
         this.statusText.style.color = "#ff6666";
         this.statusText.style.opacity = "1";
+        this.removeHookFish();
         setTimeout(() => this.cancelFishing(), 1500);
+      }
+    }
+
+    // Animate 3D fish
+    if (this.hookFish) {
+      if (this.state === "bite" || this.state === "reeling") {
+        // Fish splashing at the surface
+        const t = performance.now() / 1000;
+        this.hookFish.position.y = this.castPos.y + 0.3 + Math.sin(t * 8) * 0.15;
+        this.hookFish.rotation.y = Math.sin(t * 5) * 0.5;
+        this.hookFish.rotation.z = Math.sin(t * 7) * 0.3;
+        // Scale fish up slightly when it bites
+        const s = 1 + Math.sin(t * 6) * 0.1;
+        this.hookFish.scale.set(s, s, s);
+      } else if (this.state === "caught" && this.playerRef) {
+        // Fly toward player
+        this.catchAnimTime += dt;
+        const t = Math.min(this.catchAnimTime * 1.5, 1);
+        this.hookFish.position.lerpVectors(
+          this.castPos.clone().setY(this.castPos.y + 1),
+          this.playerRef.position.clone().setY(this.playerRef.position.y + 1),
+          t
+        );
+        this.hookFish.rotation.z += dt * 10;
+        // Shrink as it reaches player (collected!)
+        const shrink = Math.max(0, 1 - t * 0.8);
+        this.hookFish.scale.setScalar(shrink);
       }
     }
 

@@ -107,6 +107,7 @@ if (savedGame) {
   dayTime = saveManager.applyLoad(savedGame, player, world);
 }
 
+fishingGame.setScene(sceneManager.scene, player);
 fishingGame.onCatch = (fishName) => {
   console.log("Caught:", fishName);
 };
@@ -174,6 +175,8 @@ document.addEventListener("keydown", (e) => {
 
   // C to cast fishing line (when holding rod and looking at water)
   if (e.code === "KeyC" && currentTool === ToolType.FISHING_ROD && fishingGame.state === "idle" && raycaster.lastWaterHit) {
+    const [wx, wy, wz] = raycaster.lastWaterHit.blockPos;
+    fishingGame.setCastPosition(new THREE.Vector3(wx + 0.5, wy + 0.5, wz + 0.5));
     fishingGame.startFishing();
     controller.playerModel.triggerSwing();
     sound.playSplash();
@@ -603,6 +606,8 @@ function gameLoop(now: number) {
       if (fishingGame.state === "idle") {
         // Only cast if looking at water
         if (raycaster.lastWaterHit) {
+          const [wx, wy, wz] = raycaster.lastWaterHit.blockPos;
+          fishingGame.setCastPosition(new THREE.Vector3(wx + 0.5, wy + 0.5, wz + 0.5));
           fishingGame.startFishing();
           controller.playerModel.triggerSwing();
           sound.playSplash();
@@ -822,6 +827,7 @@ function gameLoop(now: number) {
   // Autosave every 30s
   saveManager.updateAutosave(dt, player, world, dayTime);
 
+  hud.fishCaughtCount = fishingGame.totalCaught;
   hud.debugInfo.animals = animals.getAnimals().length;
   hud.debugInfo.fish = aquatics.getCreatures().length;
   hud.debugInfo.zombies = zombies.length;
