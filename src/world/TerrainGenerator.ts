@@ -171,7 +171,8 @@ export class TerrainGenerator {
                 if (chunk.getBlock(lx, ly, lz) === BlockId.AIR) {
                   // Occasionally place "fruit" (torch = yellow dot) among leaves
                   const isFruit = Math.abs(dx) > 1 && Math.abs(dz) > 1 && Math.random() < 0.3 && dy < trunkHeight + 2;
-                  chunk.setBlock(lx, ly, lz, isFruit ? BlockId.TORCH : BlockId.LEAVES);
+                  const fruitType = Math.random() > 0.5 ? BlockId.FLOWER_RED : BlockId.FLOWER_BLUE;
+                  chunk.setBlock(lx, ly, lz, isFruit ? fruitType : BlockId.LEAVES);
                 }
               }
             }

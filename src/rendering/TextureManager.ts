@@ -124,6 +124,51 @@ export class TextureManager {
         }
       }
     }
+
+    // Flower textures — draw stem + petals instead of solid fill
+    if (blockId === BlockId.FLOWER_RED || blockId === BlockId.FLOWER_BLUE) {
+      // Clear to transparent green (grass background)
+      ctx.fillStyle = "#4a8c2a";
+      ctx.fillRect(x, y, size, size);
+      // Green stem
+      ctx.fillStyle = "#227722";
+      ctx.fillRect(x + 7, y + 8, 2, 8);
+      // Leaf
+      ctx.fillStyle = "#33aa33";
+      ctx.fillRect(x + 5, y + 10, 3, 2);
+      // Petals
+      const petalColor = blockId === BlockId.FLOWER_RED ? "#ee2222" : "#4444ee";
+      ctx.fillStyle = petalColor;
+      // 5 petals in cross pattern
+      ctx.fillRect(x + 6, y + 3, 4, 3); // top
+      ctx.fillRect(x + 6, y + 8, 4, 2); // bottom
+      ctx.fillRect(x + 3, y + 5, 3, 3); // left
+      ctx.fillRect(x + 10, y + 5, 3, 3); // right
+      ctx.fillRect(x + 6, y + 5, 4, 3); // center
+      // Yellow center
+      ctx.fillStyle = "#ffdd00";
+      ctx.fillRect(x + 7, y + 5, 2, 2);
+      // Petal highlights
+      ctx.fillStyle = "rgba(255,255,255,0.3)";
+      ctx.fillRect(x + 7, y + 3, 2, 1);
+      ctx.fillRect(x + 4, y + 5, 1, 2);
+    }
+
+    // Torch — draw stick with flame
+    if (blockId === BlockId.TORCH) {
+      ctx.fillStyle = "#4a8c2a"; // green bg to blend with grass when used as flower
+      ctx.fillRect(x, y, size, size);
+      // Brown stick
+      ctx.fillStyle = "#6b4226";
+      ctx.fillRect(x + 7, y + 6, 2, 10);
+      // Flame
+      ctx.fillStyle = "#ff8800";
+      ctx.fillRect(x + 6, y + 3, 4, 4);
+      ctx.fillStyle = "#ffcc00";
+      ctx.fillRect(x + 7, y + 2, 2, 3);
+      ctx.fillStyle = "#ffee66";
+      ctx.fillRect(x + 7, y + 3, 2, 1);
+    }
   }
 
   getUVs(blockId: BlockId, face: "top" | "bottom" | "side"): [number, number, number, number] {

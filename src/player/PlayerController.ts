@@ -41,10 +41,15 @@ export class PlayerController {
     this.playerModel.group.visible = this.isThirdPerson;
     scene.add(this.playerModel.group);
 
-    // First-person hand view — attached to camera
+    // First-person hand view — child of camera so it follows automatically
     this.fpHandGroup = new THREE.Group();
+    // Position in camera-local space: right, down, forward
+    this.fpHandGroup.position.set(0.4, -0.35, -0.5);
+    // Angle the tool like it's being held
+    this.fpHandGroup.rotation.set(-0.3, -0.2, 0.3);
     this.buildFPTools();
-    scene.add(this.fpHandGroup);
+    (this.camera as THREE.PerspectiveCamera).add(this.fpHandGroup);
+    scene.add(this.camera);
     this.setFPTool(ToolType.PICKAXE);
   }
 
@@ -299,38 +304,30 @@ export class PlayerController {
       );
     }
 
-    // Position first-person hand in bottom-right of view
+    // First-person hand — it's a child of camera, so position is automatic
+    // Just handle swing animation and walking bob
+    this.fpHandGroup.visible = !this.isThirdPerson;
+
     if (!this.isThirdPerson) {
-      const lookDir = this.getLookDirection();
-      const rightDir = new THREE.Vector3(-lookDir.z, 0, lookDir.x).normalize();
-      const upDir = new THREE.Vector3(0, 1, 0);
-
-      // Hand position: slightly right, below, and in front of camera
-      this.fpHandGroup.position.set(
-        this.camera.position.x + rightDir.x * 0.35 + lookDir.x * 0.5,
-        this.camera.position.y - 0.3 + lookDir.y * 0.3,
-        this.camera.position.z + rightDir.z * 0.35 + lookDir.z * 0.5
-      );
-
-      // Rotate to face camera direction
-      this.fpHandGroup.rotation.y = p.yaw + Math.PI;
-      this.fpHandGroup.rotation.x = -p.pitch * 0.3;
+      // Reset to base position
+      this.fpHandGroup.position.set(0.4, -0.35, -0.5);
+      this.fpHandGroup.rotation.set(-0.3, -0.2, 0.3);
 
       // Swing animation
       if (this.fpIsSwinging) {
         this.fpSwingTime += 0.12;
-        const swing = Math.sin(this.fpSwingTime * Math.PI) * 0.8;
+        const swing = Math.sin(this.fpSwingTime * Math.PI) * 0.7;
         this.fpHandGroup.rotation.x -= swing;
+        this.fpHandGroup.position.y -= swing * 0.1;
         if (this.fpSwingTime > 1) this.fpIsSwinging = false;
       }
 
       // Gentle bob while walking
       if (this.isMoving) {
-        const bob = Math.sin(performance.now() / 120) * 0.02;
-        this.fpHandGroup.position.y += bob;
+        const t = performance.now() / 120;
+        this.fpHandGroup.position.y += Math.sin(t) * 0.015;
+        this.fpHandGroup.position.x += Math.cos(t * 0.5) * 0.008;
       }
     }
-
-    this.fpHandGroup.visible = !this.isThirdPerson;
   }
 }
