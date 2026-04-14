@@ -102,6 +102,10 @@ const MOB_LOOT: Record<string, LootDrop[]> = {
     { item: "Gobbler Trophy", xp: 20 },
     { item: "Let's Go Hokies!", xp: 25 },
   ],
+  mountaingoat: [
+    { item: "Goat Horn", xp: 8 },
+    { item: "Mountain Wool", xp: 5 },
+  ],
 };
 
 export function rollLoot(mobType: string): LootDrop {

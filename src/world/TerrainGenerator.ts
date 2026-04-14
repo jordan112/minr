@@ -65,6 +65,9 @@ export class TerrainGenerator {
           } else if (y === clampedHeight && clampedHeight <= waterLevel + 1) {
             // Sand at shoreline
             chunk.setBlock(x, y, z, BlockId.SAND);
+          } else if (y === clampedHeight && clampedHeight > SEA_LEVEL + 4) {
+            // Snow on peaks (SAND = light colored, approximates snow)
+            chunk.setBlock(x, y, z, BlockId.SAND);
           } else if (y === clampedHeight) {
             chunk.setBlock(x, y, z, BlockId.GRASS);
           } else if (y > clampedHeight - 4 && y < clampedHeight) {
@@ -81,6 +84,9 @@ export class TerrainGenerator {
 
     // Tree pass
     this.generateTrees(chunk, worldX, worldZ);
+
+    // Flower pass — scatter flowers (TORCH blocks) on grass
+    this.generateFlowers(chunk, worldX, worldZ);
   }
 
   private generateTrees(chunk: Chunk, worldX: number, worldZ: number): void {
@@ -198,6 +204,30 @@ export class TerrainGenerator {
           if (block === BlockId.GRASS || block === BlockId.DIRT || block === BlockId.SAND) {
             break;
           }
+        }
+      }
+    }
+  }
+
+  private generateFlowers(chunk: Chunk, worldX: number, worldZ: number): void {
+    for (let x = 0; x < CHUNK_SIZE; x++) {
+      for (let z = 0; z < CHUNK_SIZE; z++) {
+        const wx = worldX + x;
+        const wz = worldZ + z;
+
+        if (this.treeNoise(wx / 2 + 2000, wz / 2 + 2000) <= 0.7) continue;
+
+        // Find surface grass block
+        for (let y = WORLD_HEIGHT - 1; y >= 1; y--) {
+          const block = chunk.getBlock(x, y, z);
+          if (block === BlockId.GRASS) {
+            // Place flower on top if air above
+            if (y + 1 < WORLD_HEIGHT && chunk.getBlock(x, y + 1, z) === BlockId.AIR) {
+              chunk.setBlock(x, y + 1, z, BlockId.TORCH);
+            }
+            break;
+          }
+          if (block !== BlockId.AIR) break;
         }
       }
     }

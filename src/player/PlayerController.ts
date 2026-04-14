@@ -60,8 +60,8 @@ export class PlayerController {
   private handleMouse(): void {
     if (!this.input.isPointerLocked) return;
 
-    this.player.yaw -= this.input.mouseDX * MOUSE_SENSITIVITY;
-    this.player.pitch += this.input.mouseDY * MOUSE_SENSITIVITY; // non-inverted: move mouse up = look up
+    this.player.yaw += this.input.mouseDX * MOUSE_SENSITIVITY;
+    this.player.pitch -= this.input.mouseDY * MOUSE_SENSITIVITY; // non-inverted: move mouse up = look up
     this.player.pitch = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, this.player.pitch));
   }
 

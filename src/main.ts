@@ -8,7 +8,7 @@ import { InputManager } from "./input/InputManager";
 import { VoxelRaycaster } from "./player/Raycaster";
 import { HUD } from "./ui/HUD";
 import { BlockId, PLACEABLE_BLOCKS, isSolid } from "./world/BlockType";
-import { PLAYER_HEIGHT } from "./utils/constants";
+import { PLAYER_HEIGHT, SEA_LEVEL } from "./utils/constants";
 import { SoundManager } from "./audio/SoundManager";
 import { AnimalManager } from "./entities/AnimalManager";
 import { Animal } from "./entities/Animal";
@@ -20,6 +20,7 @@ import { Villager } from "./entities/Villager";
 import { Zombie } from "./entities/Zombie";
 import { RareCreature, ALL_RARE_TYPES } from "./entities/RareCreature";
 import type { RareType } from "./entities/RareCreature";
+import { MountainGoat } from "./entities/MountainGoat";
 import { LootPopup, rollLoot } from "./ui/LootPopup";
 import { Boat } from "./entities/Boat";
 import { SaveManager } from "./save/SaveManager";
@@ -61,6 +62,25 @@ ghostBlock.renderOrder = 2;
 sceneManager.scene.add(ghostBlock);
 const saveManager = new SaveManager();
 
+// Break particle effect
+const breakParticles: {mesh: THREE.Mesh, vel: THREE.Vector3, life: number}[] = [];
+function spawnBreakParticles(x: number, y: number, z: number) {
+  for (let i = 0; i < 8; i++) {
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(0.12, 0.12, 0.12),
+      new THREE.MeshBasicMaterial({ color: 0x888888 })
+    );
+    mesh.position.set(x + 0.5, y + 0.5, z + 0.5);
+    const vel = new THREE.Vector3(
+      (Math.random() - 0.5) * 4,
+      Math.random() * 5 + 2,
+      (Math.random() - 0.5) * 4
+    );
+    sceneManager.scene.add(mesh);
+    breakParticles.push({ mesh, vel, life: 1.0 });
+  }
+}
+
 // Villager NPCs
 const villagers: Villager[] = [];
 function spawnVillagers() {
@@ -96,10 +116,16 @@ let zombieSpawnTimer = 5;
 let dayTime = 0.25; // start at sunrise
 const DAY_LENGTH = 120;
 let isPaused = false;
+let playerAir = 10;
+let airTimer = 0;
 
 // Rare creatures
 const rareCreatures: RareCreature[] = [];
 let rareSpawnTimer = 30;
+
+// Mountain goats
+const mountainGoats: MountainGoat[] = [];
+let goatSpawnTimer = 10;
 
 // Boats
 const boats: Boat[] = [];
@@ -288,6 +314,7 @@ function showSpawnMenu() {
     { label: "Villager", fn: () => spawnVillagerAt() },
     { label: "MSU Spartan", fn: () => spawnRareAt("spartan") },
     { label: "Hokie Bird", fn: () => spawnRareAt("hokiebird") },
+    { label: "Mtn Goat", fn: () => { const [x,y,z] = getSpawnPos(); const g = new MountainGoat(world,x,y,z); mountainGoats.push(g); sceneManager.scene.add(g.group); } },
   ];
 
   for (const s of spawns) {
@@ -494,8 +521,8 @@ function gameLoop(now: number) {
       continue;
     }
 
-    // Zombie attacks player (only if not hidden)
-    if (!z.isDead && !playerHidden) {
+    // Zombie attacks player (only if not hidden, only at night)
+    if (!z.isDead && !playerHidden && isNight) {
       const dx = z.position.x - player.position.x;
       const dz = z.position.z - player.position.z;
       const dist = Math.sqrt(dx * dx + dz * dz);
@@ -550,8 +577,8 @@ function gameLoop(now: number) {
       const dx = rc.position.x - player.position.x;
       const dz = rc.position.z - player.position.z;
       const dist = Math.sqrt(dx * dx + dz * dz);
-      // Attack
-      if (dist < 2 && rc.canAttack()) {
+      // Attack (only at night)
+      if (dist < 2 && rc.canAttack() && isNight) {
         const dmg = rc.doAttack();
         player.takeDamage(dmg);
       }
@@ -730,6 +757,7 @@ function gameLoop(now: number) {
             }
           }
         } else {
+          spawnBreakParticles(bx, by, bz);
           world.setBlock(bx, by, bz, BlockId.AIR);
         }
         controller.playerModel.triggerSwing();
@@ -778,7 +806,7 @@ function gameLoop(now: number) {
 
   // Ghost preview block
   ghostBlock.position.set(placeX + 0.5, placeY + 0.5, placeZ + 0.5);
-  ghostBlock.visible = hasPlaceTarget;
+  ghostBlock.visible = false;
 
   // Place block: B/E key or right-click
   const wantsPlace = input.rightClick || input.placeClick;
@@ -855,14 +883,35 @@ function gameLoop(now: number) {
     }
   }
 
-  // Drowning — player fully underwater loses health
+  // Drowning — air bubble system
   const headY = Math.floor(player.position.y + PLAYER_HEIGHT);
   const blockAtHead = world.getBlock(
     Math.floor(player.position.x), headY, Math.floor(player.position.z)
   );
   if (blockAtHead === BlockId.WATER && !ridingBoat) {
-    player.takeDamage(1);
+    airTimer += dt;
+    if (airTimer >= 1) {
+      airTimer -= 1;
+      if (playerAir > 0) {
+        playerAir--;
+      } else {
+        player.takeDamage(2);
+      }
+    }
+  } else {
+    // Restore air when not underwater
+    airTimer += dt;
+    if (airTimer >= 1 / 3) {
+      airTimer -= 1 / 3;
+      if (playerAir < 10) {
+        playerAir = Math.min(10, playerAir + 1);
+      }
+    }
+    if (playerAir >= 10) {
+      airTimer = 0;
+    }
   }
+  hud.airBubbles = playerAir;
 
   // Zombie ambient groans (when nearby)
   for (const z of zombies) {
@@ -881,6 +930,45 @@ function gameLoop(now: number) {
     const rdz = rc.position.z - player.position.z;
     if (rdx * rdx + rdz * rdz < 25 * 25 && Math.random() < dt * 0.05) {
       sound.playRoar();
+    }
+  }
+
+  // Mountain goat spawning (on high terrain)
+  goatSpawnTimer -= dt;
+  if (goatSpawnTimer <= 0 && mountainGoats.length < 5) {
+    goatSpawnTimer = 12 + Math.random() * 15;
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 15 + Math.random() * 25;
+    const gx = player.position.x + Math.cos(angle) * dist;
+    const gz = player.position.z + Math.sin(angle) * dist;
+    for (let y = 80; y >= 1; y--) {
+      const block = world.getBlock(Math.floor(gx), y, Math.floor(gz));
+      if (block === BlockId.SAND || block === BlockId.STONE || block === BlockId.GRASS) {
+        // Only spawn on higher terrain
+        if (y > SEA_LEVEL + 3) {
+          const goat = new MountainGoat(world, gx, y + 1, gz);
+          mountainGoats.push(goat);
+          sceneManager.scene.add(goat.group);
+        }
+        break;
+      }
+    }
+  }
+
+  // Update mountain goats
+  for (let i = mountainGoats.length - 1; i >= 0; i--) {
+    const g = mountainGoats[i]!;
+    g.update(dt);
+    if (g.isDead && !g.group.visible) {
+      sceneManager.scene.remove(g.group);
+      mountainGoats.splice(i, 1);
+      continue;
+    }
+    const dx = g.position.x - player.position.x;
+    const dz = g.position.z - player.position.z;
+    if (dx * dx + dz * dz > 70 * 70) {
+      sceneManager.scene.remove(g.group);
+      mountainGoats.splice(i, 1);
     }
   }
 
@@ -905,6 +993,20 @@ function gameLoop(now: number) {
   hud.debugInfo.zombies = zombies.length;
   hud.dayTime = dayTime;
   hud.update(player, dt);
+  // Update break particles
+  for (let i = breakParticles.length - 1; i >= 0; i--) {
+    const p = breakParticles[i]!;
+    p.vel.y -= 15 * dt;
+    p.mesh.position.add(p.vel.clone().multiplyScalar(dt));
+    p.mesh.rotation.x += dt * 5;
+    p.mesh.rotation.z += dt * 3;
+    p.life -= dt;
+    if (p.life <= 0) {
+      sceneManager.scene.remove(p.mesh);
+      breakParticles.splice(i, 1);
+    }
+  }
+
   input.resetFrame();
   sceneManager.render();
 }
