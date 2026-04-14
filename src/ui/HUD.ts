@@ -333,7 +333,7 @@ export class HUD {
     } else {
       this.healthFill.style.background = "linear-gradient(90deg, #cc2222, #ff4444)";
     }
-    this.healthText.textContent = `${player.health} / ${player.maxHealth}`;
+    this.healthText.textContent = `${player.health} / ${player.maxHealth}  Lv.${player.level}  XP:${player.xp}/${player.level * 20}`;
 
     // Day/night
     const isNight = this.dayTime < 0.25 || this.dayTime > 0.75;

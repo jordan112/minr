@@ -10,6 +10,21 @@ export class Player {
   health = 20;
   maxHealth = 20;
   hurtCooldown = 0;
+  xp = 0;
+  level = 1;
+
+  addXP(amount: number): boolean {
+    this.xp += amount;
+    const needed = this.level * 20;
+    if (this.xp >= needed) {
+      this.xp -= needed;
+      this.level++;
+      this.maxHealth += 2;
+      this.health = this.maxHealth;
+      return true; // leveled up!
+    }
+    return false;
+  }
 
   takeDamage(amount: number): void {
     if (this.hurtCooldown > 0) return;

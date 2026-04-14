@@ -20,6 +20,7 @@ import { Villager } from "./entities/Villager";
 import { Zombie } from "./entities/Zombie";
 import { RareCreature, ALL_RARE_TYPES } from "./entities/RareCreature";
 import type { RareType } from "./entities/RareCreature";
+import { LootPopup, rollLoot } from "./ui/LootPopup";
 
 // --- Init ---
 const canvas = document.getElementById("game") as HTMLCanvasElement;
@@ -37,6 +38,7 @@ const aquatics = new AquaticManager(sceneManager.scene, world);
 const fishingGame = new FishingGame();
 
 const signs = new SignManager(sceneManager.scene, world);
+const loot = new LootPopup();
 
 // Villager NPCs
 const villagers: Villager[] = [];
@@ -290,10 +292,10 @@ function gameLoop(now: number) {
     if (obj instanceof THREE.AmbientLight) {
       obj.intensity = 0.15 + sunBrightness * 0.35;
     }
-    if (obj instanceof THREE.DirectionalLight) {
-      obj.intensity = 0.2 + sunBrightness * 0.6;
-    }
   });
+
+  // Update sun/moon/stars positions
+  sceneManager.updateDayNight(dayTime, player.position);
 
   // Player hurt cooldown
   player.hurtCooldown -= dt;
@@ -561,17 +563,35 @@ function gameLoop(now: number) {
       }
 
       if (rareTarget) {
+        const wasDead = rareTarget.isDead;
         rareTarget.takeDamage(toolDef.damage);
         controller.playerModel.triggerSwing();
         sound.playBlockBreak();
+        if (!wasDead && rareTarget.isDead) {
+          const drop = rollLoot(rareTarget.type);
+          const lvl = player.addXP(drop.xp);
+          loot.show(`+${drop.item}  +${drop.xp} XP` + (lvl ? "  LEVEL UP!" : ""), "#ff66ff");
+        }
       } else if (zombieTarget) {
+        const wasDead = zombieTarget.isDead;
         zombieTarget.takeDamage(toolDef.damage);
         controller.playerModel.triggerSwing();
         sound.playBlockBreak();
+        if (!wasDead && zombieTarget.isDead) {
+          const drop = rollLoot("zombie");
+          const lvl = player.addXP(drop.xp);
+          loot.show(`+${drop.item}  +${drop.xp} XP` + (lvl ? "  LEVEL UP!" : ""), "#aaffaa");
+        }
       } else if (target) {
+        const wasDead = target.isDead;
         target.takeDamage(toolDef.damage);
         controller.playerModel.triggerSwing();
         sound.playBlockBreak();
+        if (!wasDead && target.isDead) {
+          const drop = rollLoot(target.type);
+          const lvl = player.addXP(drop.xp);
+          loot.show(`+${drop.item}  +${drop.xp} XP` + (lvl ? "  LEVEL UP!" : ""), "#ffdd44");
+        }
       } else if (aquaticTarget) {
         aquaticTarget.takeDamage(toolDef.damage);
         controller.playerModel.triggerSwing();
