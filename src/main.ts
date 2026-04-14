@@ -21,6 +21,7 @@ import { Zombie } from "./entities/Zombie";
 import { RareCreature, ALL_RARE_TYPES } from "./entities/RareCreature";
 import type { RareType } from "./entities/RareCreature";
 import { LootPopup, rollLoot } from "./ui/LootPopup";
+import { SaveManager } from "./save/SaveManager";
 
 // --- Init ---
 const canvas = document.getElementById("game") as HTMLCanvasElement;
@@ -39,6 +40,7 @@ const fishingGame = new FishingGame();
 
 const signs = new SignManager(sceneManager.scene, world);
 const loot = new LootPopup();
+const saveManager = new SaveManager();
 
 // Villager NPCs
 const villagers: Villager[] = [];
@@ -64,6 +66,12 @@ let isPaused = false;
 // Rare creatures
 const rareCreatures: RareCreature[] = [];
 let rareSpawnTimer = 30;
+
+// Auto-load saved game if exists
+const savedGame = saveManager.load();
+if (savedGame) {
+  dayTime = saveManager.applyLoad(savedGame, player, world);
+}
 
 fishingGame.onCatch = (fishName) => {
   console.log("Caught:", fishName);
@@ -145,6 +153,20 @@ document.addEventListener("keydown", (e) => {
   // G to open spawn menu
   if (e.code === "KeyG") {
     showSpawnMenu();
+  }
+
+  // Ctrl+S / Digit0 to save
+  if ((e.code === "KeyS" && (e.ctrlKey || e.metaKey)) || e.code === "Digit0") {
+    e.preventDefault();
+    saveManager.save(player, world, dayTime);
+  }
+
+  // L to load
+  if (e.code === "KeyL") {
+    const data = saveManager.load();
+    if (data) {
+      dayTime = saveManager.applyLoad(data, player, world);
+    }
   }
 
   // R to reset position
@@ -651,6 +673,9 @@ function gameLoop(now: number) {
       sound.playBlockPlace();
     }
   }
+
+  // Autosave every 30s
+  saveManager.updateAutosave(dt, player, world, dayTime);
 
   hud.debugInfo.animals = animals.getAnimals().length;
   hud.debugInfo.fish = aquatics.getCreatures().length;

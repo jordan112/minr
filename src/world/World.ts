@@ -12,6 +12,8 @@ export class World {
   private textureManager: TextureManager;
   private terrainGen: TerrainGenerator;
   private meshesPerFrame = 2;
+  // Track player-made changes (world x,y,z -> blockId)
+  private blockChanges = new Map<string, { x: number; y: number; z: number; id: number }>();
 
   constructor(scene: THREE.Scene, textureManager: TextureManager, seed = 42) {
     this.scene = scene;
@@ -38,7 +40,7 @@ export class World {
     return chunk.getBlock(lx, wy, lz);
   }
 
-  setBlock(wx: number, wy: number, wz: number, id: BlockId): void {
+  setBlock(wx: number, wy: number, wz: number, id: BlockId, trackChange = true): void {
     if (wy < 0 || wy >= WORLD_HEIGHT) return;
     const cx = Math.floor(wx / CHUNK_SIZE);
     const cz = Math.floor(wz / CHUNK_SIZE);
@@ -47,6 +49,11 @@ export class World {
     const lx = ((wx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
     const lz = ((wz % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
     chunk.setBlock(lx, wy, lz, id);
+
+    // Record change for save system
+    if (trackChange) {
+      this.blockChanges.set(`${wx},${wy},${wz}`, { x: wx, y: wy, z: wz, id });
+    }
 
     // Mark neighboring chunks dirty if at edge
     if (lx === 0) this.markDirty(cx - 1, cz);
@@ -73,6 +80,7 @@ export class World {
         if (!this.chunks.has(k)) {
           const chunk = new Chunk(cx, cz);
           this.terrainGen.generate(chunk);
+          this.applyPendingChanges(chunk);
           this.chunks.set(k, chunk);
         }
       }
@@ -137,5 +145,36 @@ export class World {
     }
 
     chunk.isDirty = false;
+  }
+
+  /** Get all player-made block changes for saving */
+  getBlockChanges(): { x: number; y: number; z: number; id: number }[] {
+    return Array.from(this.blockChanges.values());
+  }
+
+  /** Apply saved block changes (after chunks are loaded) */
+  applyBlockChanges(changes: { x: number; y: number; z: number; id: number }[]): void {
+    // Store them so they get applied as chunks load
+    for (const c of changes) {
+      this.blockChanges.set(`${c.x},${c.y},${c.z}`, c);
+    }
+    // Apply to any already-loaded chunks
+    for (const c of changes) {
+      this.setBlock(c.x, c.y, c.z, c.id as BlockId, false);
+    }
+  }
+
+  /** Re-apply pending changes when a new chunk loads */
+  applyPendingChanges(chunk: Chunk): void {
+    const wx0 = chunk.chunkX * CHUNK_SIZE;
+    const wz0 = chunk.chunkZ * CHUNK_SIZE;
+    for (const c of this.blockChanges.values()) {
+      if (c.x >= wx0 && c.x < wx0 + CHUNK_SIZE &&
+          c.z >= wz0 && c.z < wz0 + CHUNK_SIZE) {
+        const lx = ((c.x % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+        const lz = ((c.z % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+        chunk.setBlock(lx, c.y, lz, c.id as BlockId);
+      }
+    }
   }
 }

@@ -290,6 +290,7 @@ export class HUD {
         <b>FISH:</b> F = equip rod &nbsp; C or Left-click = cast &nbsp; Hold click to reel<br>
         <b style="color:#ffaa33">SPAWN:</b> G to spawn creatures (T-Rex, Dragon, etc.)<br>
         <b>HEAL:</b> Stay safe 3s to auto-regen &nbsp; <b>PAUSE:</b> P<br>
+        <b>SAVE:</b> Ctrl+S (autosaves every 30s) &nbsp; <b>LOAD:</b> L<br>
         <b>RESET:</b> R &nbsp; <b>MUSIC:</b> M &nbsp; <b>DEBUG:</b> F3
       </div>
     `;
