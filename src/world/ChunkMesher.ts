@@ -54,7 +54,33 @@ export function buildChunkMesh(
         if (blockId === BlockId.AIR) continue;
 
         const isLiquid = blockId === BlockId.WATER || blockId === BlockId.LAVA;
+        const isCross = blockId === BlockId.FLOWER_RED || blockId === BlockId.FLOWER_BLUE || blockId === BlockId.FIRE;
         const target = isLiquid ? water : solid;
+
+        // Cross-shaped billboard for flowers/fire (two diagonal planes)
+        if (isCross) {
+          const [u0, v0, u1, v1] = textureManager.getUVs(blockId, "side");
+          // Two diagonal planes forming an X
+          const crossVerts: [number,number,number][][] = [
+            [[0,0,0],[0,1,0],[1,1,1],[1,0,1]], // diagonal 1
+            [[1,0,0],[1,1,0],[0,1,1],[0,0,1]], // diagonal 2
+            [[1,0,1],[1,1,1],[0,1,0],[0,0,0]], // diagonal 1 back
+            [[0,0,1],[0,1,1],[1,1,0],[1,0,0]], // diagonal 2 back
+          ];
+          for (const verts of crossVerts) {
+            for (const [vx, vy, vz] of verts) {
+              target.positions.push(x + vx, y + vy, z + vz);
+              target.normals.push(0, 0, 1);
+            }
+            target.uvs.push(u0, v0, u0, v1, u1, v1, u1, v0);
+            target.indices.push(
+              target.vertexCount, target.vertexCount + 1, target.vertexCount + 2,
+              target.vertexCount, target.vertexCount + 2, target.vertexCount + 3
+            );
+            target.vertexCount += 4;
+          }
+          continue;
+        }
 
         for (const face of FACES) {
           const [dx, dy, dz] = face.dir;

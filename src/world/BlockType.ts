@@ -22,6 +22,8 @@ export enum BlockId {
   GLASS = 18,
   FLOWER_RED = 19,
   FLOWER_BLUE = 20,
+  FRUIT_RED = 21,   // apple
+  FRUIT_ORANGE = 22, // orange
 }
 
 export interface BlockDef {
@@ -86,6 +88,8 @@ def(BlockId.FIRE, "Fire", { top: "#ff6600", bottom: "#ff4400", side: "#ff5500" }
 def(BlockId.GLASS, "Glass", { top: "#aaddff", bottom: "#aaddff", side: "#aaddff" }, { isTransparent: true }, 3, 6);
 def(BlockId.FLOWER_RED, "Poppy", { top: "#ff2222", bottom: "#22aa22", side: "#ff2222" }, { isSolid: false, isTransparent: true }, 3, 9);
 def(BlockId.FLOWER_BLUE, "Bluebell", { top: "#4444ff", bottom: "#22aa22", side: "#4444ff" }, { isSolid: false, isTransparent: true }, 3, 12);
+def(BlockId.FRUIT_RED, "Apple", { top: "#cc1111", bottom: "#cc1111", side: "#cc1111" }, { isSolid: false, isTransparent: true }, 4, 0);
+def(BlockId.FRUIT_ORANGE, "Orange", { top: "#ff8800", bottom: "#ff8800", side: "#ff8800" }, { isSolid: false, isTransparent: true }, 4, 3);
 
 export function getBlockDef(id: BlockId): BlockDef | undefined {
   return BLOCK_DEFS.get(id);

@@ -44,10 +44,19 @@ export class PlayerController {
     // First-person hand view — child of camera so it follows automatically
     this.fpHandGroup = new THREE.Group();
     // Position in camera-local space: right, down, forward
-    this.fpHandGroup.position.set(0.4, -0.35, -0.5);
+    this.fpHandGroup.position.set(0.35, -0.3, -0.45);
+    this.fpHandGroup.scale.set(1.3, 1.3, 1.3);
     // Angle the tool like it's being held
-    this.fpHandGroup.rotation.set(-0.3, -0.2, 0.3);
+    this.fpHandGroup.rotation.set(-0.2, -0.3, 0.4);
     this.buildFPTools();
+    // Render on top of everything
+    this.fpHandGroup.renderOrder = 999;
+    this.fpHandGroup.traverse((obj) => {
+      if (obj instanceof THREE.Mesh) {
+        obj.material.depthTest = false;
+        obj.renderOrder = 999;
+      }
+    });
     (this.camera as THREE.PerspectiveCamera).add(this.fpHandGroup);
     scene.add(this.camera);
     this.setFPTool(ToolType.PICKAXE);
@@ -310,8 +319,8 @@ export class PlayerController {
 
     if (!this.isThirdPerson) {
       // Reset to base position
-      this.fpHandGroup.position.set(0.4, -0.35, -0.5);
-      this.fpHandGroup.rotation.set(-0.3, -0.2, 0.3);
+      this.fpHandGroup.position.set(0.35, -0.3, -0.45);
+      this.fpHandGroup.rotation.set(-0.2, -0.3, 0.4);
 
       // Swing animation
       if (this.fpIsSwinging) {

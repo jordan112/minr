@@ -31,6 +31,7 @@ export class TextureManager {
       BlockId.WIRE, BlockId.LEVER, BlockId.LAMP, BlockId.DOOR,
       BlockId.GRAVEL, BlockId.FIRE, BlockId.GLASS,
       BlockId.FLOWER_RED, BlockId.FLOWER_BLUE,
+      BlockId.FRUIT_RED, BlockId.FRUIT_ORANGE,
     ]) {
       const def = getBlockDef(blockId);
       if (!def) continue;
@@ -152,6 +153,36 @@ export class TextureManager {
       ctx.fillStyle = "rgba(255,255,255,0.3)";
       ctx.fillRect(x + 7, y + 3, 2, 1);
       ctx.fillRect(x + 4, y + 5, 1, 2);
+    }
+
+    // Fruit — small round shape hanging from leaf
+    if (blockId === BlockId.FRUIT_RED || blockId === BlockId.FRUIT_ORANGE) {
+      // Green leaf background
+      ctx.fillStyle = "#2d6b1e";
+      ctx.fillRect(x, y, size, size);
+      // Add leaf noise
+      for (let py2 = 0; py2 < size; py2++) {
+        for (let px2 = 0; px2 < size; px2++) {
+          if (Math.random() > 0.7) {
+            ctx.fillStyle = "rgba(0,0,0,0.1)";
+            ctx.fillRect(x + px2, y + py2, 1, 1);
+          }
+        }
+      }
+      // Stem
+      ctx.fillStyle = "#553311";
+      ctx.fillRect(x + 7, y + 3, 2, 3);
+      // Fruit body (round-ish)
+      const fruitColor = blockId === BlockId.FRUIT_RED ? "#cc1111" : "#ff8800";
+      ctx.fillStyle = fruitColor;
+      ctx.fillRect(x + 5, y + 6, 6, 5);
+      ctx.fillRect(x + 6, y + 5, 4, 7);
+      // Highlight
+      ctx.fillStyle = "rgba(255,255,255,0.3)";
+      ctx.fillRect(x + 6, y + 6, 2, 2);
+      // Shadow
+      ctx.fillStyle = "rgba(0,0,0,0.2)";
+      ctx.fillRect(x + 8, y + 9, 2, 2);
     }
 
     // Torch — draw stick with flame
