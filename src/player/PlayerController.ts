@@ -4,6 +4,7 @@ import { PlayerModel } from "./PlayerModel";
 import { InputManager } from "../input/InputManager";
 import { World } from "../world/World";
 import { isSolid } from "../world/BlockType";
+import { ToolType } from "./ToolSystem";
 import {
   GRAVITY, JUMP_VELOCITY, PLAYER_HEIGHT, PLAYER_WIDTH,
   PLAYER_SPEED, MOUSE_SENSITIVITY, MAX_DELTA_TIME
@@ -18,9 +19,16 @@ export class PlayerController {
   private input: InputManager;
   private world: World;
   playerModel: PlayerModel;
-  isThirdPerson = false; // start in first person like Minecraft
+  isThirdPerson = false;
   isMoving = false;
   justJumped = false;
+
+  // First-person hand/tool view
+  private fpHandGroup: THREE.Group;
+  private fpToolGroups = new Map<ToolType, THREE.Group>();
+  private currentFPTool: ToolType = ToolType.PICKAXE;
+  private fpSwingTime = 0;
+  private fpIsSwinging = false;
 
   constructor(player: Player, camera: THREE.Camera, input: InputManager, world: World, scene: THREE.Scene) {
     this.player = player;
@@ -32,6 +40,93 @@ export class PlayerController {
     this.playerModel = new PlayerModel();
     this.playerModel.group.visible = this.isThirdPerson;
     scene.add(this.playerModel.group);
+
+    // First-person hand view — attached to camera
+    this.fpHandGroup = new THREE.Group();
+    this.buildFPTools();
+    scene.add(this.fpHandGroup);
+    this.setFPTool(ToolType.PICKAXE);
+  }
+
+  private buildFPTools(): void {
+    const skin = new THREE.MeshLambertMaterial({ color: 0xc68642 });
+    const handleMat = new THREE.MeshLambertMaterial({ color: 0x6b4226 });
+    const ironMat = new THREE.MeshLambertMaterial({ color: 0x999999 });
+    const swordMat = new THREE.MeshLambertMaterial({ color: 0xbbbbdd });
+    const axeHeadMat = new THREE.MeshLambertMaterial({ color: 0x777777 });
+    const rodMat = new THREE.MeshLambertMaterial({ color: 0x6b4226 });
+
+    // Hand (fist)
+    const handGroup = new THREE.Group();
+    const fist = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.2, 0.15), skin);
+    handGroup.add(fist);
+    this.fpToolGroups.set(ToolType.HAND, handGroup);
+    this.fpHandGroup.add(handGroup);
+
+    // Pickaxe
+    const pickGroup = new THREE.Group();
+    const pickHandle = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.5, 0.05), handleMat);
+    pickGroup.add(pickHandle);
+    const pickHead = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.07, 0.05), ironMat);
+    pickHead.position.y = 0.25;
+    pickGroup.add(pickHead);
+    const pickTip = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.06, 0.05), ironMat);
+    pickTip.position.set(0.18, 0.22, 0);
+    pickTip.rotation.z = -0.4;
+    pickGroup.add(pickTip);
+    this.fpToolGroups.set(ToolType.PICKAXE, pickGroup);
+    this.fpHandGroup.add(pickGroup);
+
+    // Axe
+    const axeGroup = new THREE.Group();
+    const axeHandle = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.5, 0.05), handleMat);
+    axeGroup.add(axeHandle);
+    const axeHead = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.05), axeHeadMat);
+    axeHead.position.set(0.1, 0.22, 0);
+    axeGroup.add(axeHead);
+    const axeBlade = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.22, 0.06), axeHeadMat);
+    axeBlade.position.set(0.21, 0.22, 0);
+    axeGroup.add(axeBlade);
+    this.fpToolGroups.set(ToolType.AXE, axeGroup);
+    this.fpHandGroup.add(axeGroup);
+
+    // Sword
+    const swordGroup = new THREE.Group();
+    const swordHandle = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.15, 0.04), handleMat);
+    swordHandle.position.y = -0.1;
+    swordGroup.add(swordHandle);
+    const crossguard = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.03, 0.05), ironMat);
+    swordGroup.add(crossguard);
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.4, 0.03), swordMat);
+    blade.position.y = 0.22;
+    swordGroup.add(blade);
+    this.fpToolGroups.set(ToolType.SWORD, swordGroup);
+    this.fpHandGroup.add(swordGroup);
+
+    // Fishing rod
+    const rodGroup = new THREE.Group();
+    const rodPole = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.6, 0.03), rodMat);
+    rodGroup.add(rodPole);
+    const rodTip = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.15, 0.02), rodMat);
+    rodTip.position.y = 0.38;
+    rodGroup.add(rodTip);
+    const line = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.2, 0.008), new THREE.MeshBasicMaterial({ color: 0xcccccc }));
+    line.position.y = 0.55;
+    rodGroup.add(line);
+    this.fpToolGroups.set(ToolType.FISHING_ROD, rodGroup);
+    this.fpHandGroup.add(rodGroup);
+  }
+
+  setFPTool(tool: ToolType): void {
+    this.currentFPTool = tool;
+    for (const [type, group] of this.fpToolGroups) {
+      group.visible = type === tool;
+    }
+  }
+
+  triggerFPSwing(): void {
+    this.fpIsSwinging = true;
+    this.fpSwingTime = 0;
   }
 
   toggleCamera(): void {
@@ -203,5 +298,39 @@ export class PlayerController {
         p.position.z + lookDir.z
       );
     }
+
+    // Position first-person hand in bottom-right of view
+    if (!this.isThirdPerson) {
+      const lookDir = this.getLookDirection();
+      const rightDir = new THREE.Vector3(-lookDir.z, 0, lookDir.x).normalize();
+      const upDir = new THREE.Vector3(0, 1, 0);
+
+      // Hand position: slightly right, below, and in front of camera
+      this.fpHandGroup.position.set(
+        this.camera.position.x + rightDir.x * 0.35 + lookDir.x * 0.5,
+        this.camera.position.y - 0.3 + lookDir.y * 0.3,
+        this.camera.position.z + rightDir.z * 0.35 + lookDir.z * 0.5
+      );
+
+      // Rotate to face camera direction
+      this.fpHandGroup.rotation.y = p.yaw + Math.PI;
+      this.fpHandGroup.rotation.x = -p.pitch * 0.3;
+
+      // Swing animation
+      if (this.fpIsSwinging) {
+        this.fpSwingTime += 0.12;
+        const swing = Math.sin(this.fpSwingTime * Math.PI) * 0.8;
+        this.fpHandGroup.rotation.x -= swing;
+        if (this.fpSwingTime > 1) this.fpIsSwinging = false;
+      }
+
+      // Gentle bob while walking
+      if (this.isMoving) {
+        const bob = Math.sin(performance.now() / 120) * 0.02;
+        this.fpHandGroup.position.y += bob;
+      }
+    }
+
+    this.fpHandGroup.visible = !this.isThirdPerson;
   }
 }

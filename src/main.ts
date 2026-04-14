@@ -157,6 +157,7 @@ hud.onPlay = () => {
 hud.onToolSelect = (tool) => {
   currentTool = tool;
   controller.playerModel.setTool(tool);
+  controller.setFPTool(tool);
   hud.setTool(tool);
 };
 
@@ -176,6 +177,7 @@ document.addEventListener("keydown", (e) => {
     const idx = ALL_TOOLS.indexOf(currentTool);
     currentTool = ALL_TOOLS[(idx + 1) % ALL_TOOLS.length]!;
     controller.playerModel.setTool(currentTool);
+    controller.setFPTool(currentTool);
     hud.setTool(currentTool);
   }
 
@@ -184,6 +186,7 @@ document.addEventListener("keydown", (e) => {
     const idx = ALL_TOOLS.indexOf(currentTool);
     currentTool = ALL_TOOLS[(idx - 1 + ALL_TOOLS.length) % ALL_TOOLS.length]!;
     controller.playerModel.setTool(currentTool);
+    controller.setFPTool(currentTool);
     hud.setTool(currentTool);
   }
 
@@ -204,6 +207,7 @@ document.addEventListener("keydown", (e) => {
   if (e.code === "KeyF") {
     currentTool = ToolType.FISHING_ROD;
     controller.playerModel.setTool(currentTool);
+    controller.setFPTool(currentTool);
     hud.setTool(currentTool);
   }
 
@@ -224,6 +228,7 @@ document.addEventListener("keydown", (e) => {
     fishingGame.setCastPosition(new THREE.Vector3(castX, castY, castZ));
     fishingGame.startFishing();
     controller.playerModel.triggerSwing();
+        controller.triggerFPSwing();
     sound.playSplash();
   }
 
@@ -661,6 +666,7 @@ function gameLoop(now: number) {
           fishingGame.setCastPosition(new THREE.Vector3(wx + 0.5, wy + 0.5, wz + 0.5));
           fishingGame.startFishing();
           controller.playerModel.triggerSwing();
+        controller.triggerFPSwing();
           sound.playSplash();
         }
       } else if (fishingGame.state === "bite" || fishingGame.state === "reeling") {
@@ -709,6 +715,7 @@ function gameLoop(now: number) {
         const wasDead = rareTarget.isDead;
         rareTarget.takeDamage(toolDef.damage);
         controller.playerModel.triggerSwing();
+        controller.triggerFPSwing();
         sound.playBlockBreak();
         if (!wasDead && rareTarget.isDead) {
           sound.playMonsterDeath();
@@ -720,6 +727,7 @@ function gameLoop(now: number) {
         const wasDead = zombieTarget.isDead;
         zombieTarget.takeDamage(toolDef.damage);
         controller.playerModel.triggerSwing();
+        controller.triggerFPSwing();
         sound.playBlockBreak();
         if (!wasDead && zombieTarget.isDead) {
           sound.playMonsterDeath();
@@ -731,6 +739,7 @@ function gameLoop(now: number) {
         const wasDead = target.isDead;
         target.takeDamage(toolDef.damage);
         controller.playerModel.triggerSwing();
+        controller.triggerFPSwing();
         sound.playBlockBreak();
         if (!wasDead && target.isDead) {
           const drop = rollLoot(target.type);
@@ -740,6 +749,7 @@ function gameLoop(now: number) {
       } else if (aquaticTarget) {
         aquaticTarget.takeDamage(toolDef.damage);
         controller.playerModel.triggerSwing();
+        controller.triggerFPSwing();
         sound.playBlockBreak();
       } else if (raycaster.lastHit) {
         const [bx, by, bz] = raycaster.lastHit.blockPos;
@@ -750,6 +760,7 @@ function gameLoop(now: number) {
           toggleLever(world, bx, by, bz);
           sound.playBlockPlace();
           controller.playerModel.triggerSwing();
+        controller.triggerFPSwing();
         } else if (hitBlock === BlockId.TNT) {
           // TNT EXPLOSION! Destroy blocks in a radius
           sound.playExplosion();
@@ -771,6 +782,7 @@ function gameLoop(now: number) {
           world.setBlock(bx, by, bz, BlockId.AIR);
         }
         controller.playerModel.triggerSwing();
+        controller.triggerFPSwing();
         sound.playBlockBreak();
       }
     }
@@ -905,6 +917,7 @@ function gameLoop(now: number) {
     const isRowing = fwd !== 0 || turn !== 0;
     if (isRowing) {
       controller.playerModel.triggerSwing();
+        controller.triggerFPSwing();
     }
   }
 
