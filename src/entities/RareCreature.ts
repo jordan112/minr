@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { World } from "../world/World";
 import { isSolid, BlockId } from "../world/BlockType";
 
-export type RareType = "trex" | "bigfoot" | "dragon" | "unicorn" | "yeti";
+export type RareType = "trex" | "bigfoot" | "dragon" | "unicorn" | "yeti" | "spartan" | "hokiebird";
 
 interface CreatureConfig {
   health: number;
@@ -17,10 +17,12 @@ const CONFIGS: Record<RareType, CreatureConfig> = {
   bigfoot: { health: 30, speed: 2.0, hostile: false, damage: 5, scale: 2.0 },
   dragon:  { health: 60, speed: 2.5, hostile: true, damage: 10, scale: 2.0 },
   unicorn: { health: 25, speed: 3.0, hostile: false, damage: 0, scale: 1.5 },
-  yeti:    { health: 40, speed: 2.2, hostile: true, damage: 6, scale: 2.2 },
+  yeti:      { health: 40, speed: 2.2, hostile: true, damage: 6, scale: 2.2 },
+  spartan:   { health: 35, speed: 2.5, hostile: false, damage: 3, scale: 1.8 },
+  hokiebird: { health: 30, speed: 3.0, hostile: false, damage: 2, scale: 1.6 },
 };
 
-export const ALL_RARE_TYPES: RareType[] = ["trex", "bigfoot", "dragon", "unicorn", "yeti"];
+export const ALL_RARE_TYPES: RareType[] = ["trex", "bigfoot", "dragon", "unicorn", "yeti", "spartan", "hokiebird"];
 
 export class RareCreature {
   group: THREE.Group;
@@ -57,6 +59,8 @@ export class RareCreature {
       case "dragon": this.buildDragon(); break;
       case "unicorn": this.buildUnicorn(); break;
       case "yeti": this.buildYeti(); break;
+      case "spartan": this.buildSpartan(); break;
+      case "hokiebird": this.buildHokieBird(); break;
     }
     this.group.scale.setScalar(this.config.scale);
   }
@@ -332,6 +336,158 @@ export class RareCreature {
       const leg = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.5, 0.3), darkFur);
       leg.position.y = -0.25;
       legGroup.add(leg);
+      this.group.add(legGroup);
+      this.legs.push(legGroup);
+    }
+  }
+
+  private buildSpartan(): void {
+    // MSU Spartan — green and white warrior with helmet
+    const green = new THREE.MeshLambertMaterial({ color: 0x18453b }); // MSU green
+    const white = new THREE.MeshLambertMaterial({ color: 0xffffff });
+    const gold = new THREE.MeshLambertMaterial({ color: 0xc5a04e });
+    const skin = new THREE.MeshLambertMaterial({ color: 0xdbb896 });
+    const dark = new THREE.MeshLambertMaterial({ color: 0x222222 });
+
+    // Helmet (iconic Spartan helm)
+    const helmet = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.55, 0.55), green);
+    helmet.position.y = 1.65;
+    this.group.add(helmet);
+
+    // Helmet crest (mohawk plume)
+    const crest = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.3, 0.5), white);
+    crest.position.set(0, 2.0, 0);
+    this.group.add(crest);
+
+    // Helmet face guard
+    const faceGuard = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.12, 0.05), gold);
+    faceGuard.position.set(0, 1.58, 0.28);
+    this.group.add(faceGuard);
+
+    // Eyes through helmet
+    for (const s of [-1, 1]) {
+      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.06, 0.03), dark);
+      eye.position.set(s * 0.1, 1.65, 0.28);
+      this.group.add(eye);
+    }
+
+    // Armor body
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.35), green);
+    body.position.y = 1.0;
+    this.group.add(body);
+
+    // White "S" belt area
+    const belt = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.1, 0.36), white);
+    belt.position.y = 0.65;
+    this.group.add(belt);
+
+    // Shield (left arm)
+    const shield = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, 0.4), green);
+    shield.position.set(-0.5, 1.0, 0.15);
+    this.group.add(shield);
+    const shieldEmblem = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.2, 0.2), white);
+    shieldEmblem.position.set(-0.54, 1.0, 0.15);
+    this.group.add(shieldEmblem);
+
+    // Spear (right arm)
+    const spearShaft = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.8, 0.05), new THREE.MeshLambertMaterial({ color: 0x6b4226 }));
+    spearShaft.position.set(0.4, 1.2, 0);
+    this.group.add(spearShaft);
+    const spearTip = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.2, 0.04), gold);
+    spearTip.position.set(0.4, 2.15, 0);
+    this.group.add(spearTip);
+
+    // Legs (armored)
+    for (const s of [-1, 1]) {
+      const legGroup = new THREE.Group();
+      legGroup.position.set(s * 0.15, 0.45, 0);
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.45, 0.25), green);
+      leg.position.y = -0.225;
+      legGroup.add(leg);
+      const boot = new THREE.Mesh(new THREE.BoxGeometry(0.23, 0.12, 0.26), gold);
+      boot.position.y = -0.45;
+      legGroup.add(boot);
+      this.group.add(legGroup);
+      this.legs.push(legGroup);
+    }
+  }
+
+  private buildHokieBird(): void {
+    // Virginia Tech HokieBird — maroon and orange turkey mascot
+    const maroon = new THREE.MeshLambertMaterial({ color: 0x660000 }); // VT maroon
+    const orange = new THREE.MeshLambertMaterial({ color: 0xff6600 }); // VT orange
+    const white = new THREE.MeshLambertMaterial({ color: 0xffffff });
+    const yellow = new THREE.MeshLambertMaterial({ color: 0xffaa00 });
+    const dark = new THREE.MeshLambertMaterial({ color: 0x222222 });
+    const red = new THREE.MeshLambertMaterial({ color: 0xcc0000 });
+
+    // Head (bird head)
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.4, 0.4), maroon);
+    head.position.y = 1.55;
+    this.group.add(head);
+
+    // Beak (orange, pointy)
+    const beak = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.1, 0.25), orange);
+    beak.position.set(0, 1.48, 0.3);
+    this.group.add(beak);
+
+    // Wattle/snood (red dangly bit)
+    const wattle = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.15, 0.06), red);
+    wattle.position.set(0, 1.38, 0.28);
+    this.group.add(wattle);
+
+    // Eyes (fierce)
+    for (const s of [-1, 1]) {
+      const eyeWhite = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.03), white);
+      eyeWhite.position.set(s * 0.15, 1.58, 0.2);
+      this.group.add(eyeWhite);
+      const pupil = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.03), dark);
+      pupil.position.set(s * 0.15, 1.58, 0.22);
+      this.group.add(pupil);
+    }
+
+    // Body (jersey)
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.7, 0.35), maroon);
+    body.position.y = 0.95;
+    this.group.add(body);
+
+    // VT on chest (orange stripe)
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.15, 0.01), orange);
+    stripe.position.set(0, 1.05, 0.18);
+    this.group.add(stripe);
+
+    // Wings (arms) — feathered, outstretched slightly
+    for (const s of [-1, 1]) {
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.5, 0.2), maroon);
+      wing.position.set(s * 0.42, 0.95, 0);
+      wing.rotation.z = s * -0.3;
+      this.group.add(wing);
+      // Feather tips (orange)
+      const featherTip = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.3, 0.18), orange);
+      featherTip.position.set(s * 0.6, 0.8, 0);
+      featherTip.rotation.z = s * -0.3;
+      this.group.add(featherTip);
+    }
+
+    // Tail feathers (fan behind)
+    const tailFan = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.35, 0.1), maroon);
+    tailFan.position.set(0, 1.1, -0.25);
+    this.group.add(tailFan);
+    const tailTips = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.25, 0.06), orange);
+    tailTips.position.set(0, 1.15, -0.32);
+    this.group.add(tailTips);
+
+    // Legs (bird legs — thin, yellow)
+    for (const s of [-1, 1]) {
+      const legGroup = new THREE.Group();
+      legGroup.position.set(s * 0.12, 0.45, 0);
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.4, 0.1), yellow);
+      leg.position.y = -0.2;
+      legGroup.add(leg);
+      // Talons
+      const talon = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.06, 0.2), yellow);
+      talon.position.set(0, -0.42, 0.05);
+      legGroup.add(talon);
       this.group.add(legGroup);
       this.legs.push(legGroup);
     }

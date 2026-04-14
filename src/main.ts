@@ -286,6 +286,8 @@ function showSpawnMenu() {
     { label: "Unicorn", fn: () => spawnRareAt("unicorn") },
     { label: "Yeti", fn: () => spawnRareAt("yeti") },
     { label: "Villager", fn: () => spawnVillagerAt() },
+    { label: "MSU Spartan", fn: () => spawnRareAt("spartan") },
+    { label: "Hokie Bird", fn: () => spawnRareAt("hokiebird") },
   ];
 
   for (const s of spawns) {

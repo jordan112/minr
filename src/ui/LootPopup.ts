@@ -92,6 +92,16 @@ const MOB_LOOT: Record<string, LootDrop[]> = {
     { item: "Frost Crystal", xp: 20 },
     { item: "Yeti Fur", xp: 15 },
   ],
+  spartan: [
+    { item: "Spartan Shield", xp: 20 },
+    { item: "Green Plume", xp: 15 },
+    { item: "Go Green!", xp: 25 },
+  ],
+  hokiebird: [
+    { item: "Hokie Feather", xp: 15 },
+    { item: "Gobbler Trophy", xp: 20 },
+    { item: "Let's Go Hokies!", xp: 25 },
+  ],
 };
 
 export function rollLoot(mobType: string): LootDrop {
