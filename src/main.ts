@@ -24,6 +24,9 @@ import { MountainGoat } from "./entities/MountainGoat";
 import { LootPopup, rollLoot } from "./ui/LootPopup";
 import { Boat } from "./entities/Boat";
 import { SaveManager } from "./save/SaveManager";
+import { toggleLever, propagatePower, isPowered } from "./world/RedstoneSystem";
+import { updatePhysics, checkGravityAt, registerFire, spreadWater } from "./world/PhysicsSystem";
+import { hasGravity } from "./world/BlockType";
 
 // --- Init ---
 const canvas = document.getElementById("game") as HTMLCanvasElement;
@@ -740,7 +743,12 @@ function gameLoop(now: number) {
         const [bx, by, bz] = raycaster.lastHit.blockPos;
         const hitBlock = world.getBlock(bx, by, bz);
 
-        if (hitBlock === BlockId.TNT) {
+        if (hitBlock === BlockId.LEVER) {
+          // Toggle lever
+          toggleLever(world, bx, by, bz);
+          sound.playBlockPlace();
+          controller.playerModel.triggerSwing();
+        } else if (hitBlock === BlockId.TNT) {
           // TNT EXPLOSION! Destroy blocks in a radius
           sound.playExplosion();
           const radius = 4;
@@ -820,8 +828,23 @@ function gameLoop(now: number) {
       placeY >= Math.floor(py) && placeY <= Math.floor(py + PLAYER_HEIGHT);
 
     if (!playerOverlaps && !isSolid(world.getBlock(placeX, placeY, placeZ))) {
-      world.setBlock(placeX, placeY, placeZ, PLACEABLE_BLOCKS[player.selectedBlockIndex]!);
+      const blockToPlace = PLACEABLE_BLOCKS[player.selectedBlockIndex]!;
+      world.setBlock(placeX, placeY, placeZ, blockToPlace);
       sound.playBlockPlace();
+
+      // Handle special block placement
+      if (hasGravity(blockToPlace)) {
+        checkGravityAt(world, placeX, placeY, placeZ);
+      }
+      if (blockToPlace === BlockId.FIRE) {
+        registerFire(placeX, placeY, placeZ);
+      }
+      if (blockToPlace === BlockId.WATER) {
+        spreadWater(world, placeX, placeY, placeZ);
+      }
+      if (blockToPlace === BlockId.WIRE || blockToPlace === BlockId.LAMP || blockToPlace === BlockId.DOOR) {
+        propagatePower(world, placeX, placeY, placeZ);
+      }
     }
   }
 
@@ -983,6 +1006,9 @@ function gameLoop(now: number) {
       }
     }
   }
+
+  // Physics tick (gravity, fire, water flow)
+  updatePhysics(world, dt);
 
   // Autosave every 30s
   saveManager.updateAutosave(dt, player, world, dayTime);

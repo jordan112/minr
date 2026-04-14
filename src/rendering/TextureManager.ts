@@ -28,6 +28,8 @@ export class TextureManager {
       BlockId.GRASS, BlockId.DIRT, BlockId.STONE, BlockId.WOOD,
       BlockId.LEAVES, BlockId.SAND, BlockId.WATER, BlockId.BEDROCK,
       BlockId.LAVA, BlockId.TORCH, BlockId.TNT,
+      BlockId.WIRE, BlockId.LEVER, BlockId.LAMP, BlockId.DOOR,
+      BlockId.GRAVEL, BlockId.FIRE, BlockId.GLASS,
     ]) {
       const def = getBlockDef(blockId);
       if (!def) continue;
