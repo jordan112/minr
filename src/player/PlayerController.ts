@@ -50,6 +50,13 @@ export class PlayerController {
     this.playerModel.update(dt, this.isMoving, this.player.yaw, this.player.position);
   }
 
+  /** Only update mouse look and camera — used when riding a boat */
+  updateCameraOnly(dt: number): void {
+    this.handleMouse();
+    this.updateCamera();
+    this.playerModel.update(dt, false, this.player.yaw, this.player.position);
+  }
+
   private handleMouse(): void {
     if (!this.input.isPointerLocked) return;
 

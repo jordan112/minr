@@ -41,6 +41,19 @@ const fishingGame = new FishingGame();
 
 const signs = new SignManager(sceneManager.scene, world);
 const loot = new LootPopup();
+
+// Ghost preview block for building
+const ghostGeo = new THREE.BoxGeometry(1.01, 1.01, 1.01);
+const ghostMat = new THREE.MeshBasicMaterial({
+  color: 0xffffff,
+  transparent: true,
+  opacity: 0.25,
+  wireframe: false,
+});
+const ghostBlock = new THREE.Mesh(ghostGeo, ghostMat);
+ghostBlock.visible = false;
+ghostBlock.renderOrder = 2;
+sceneManager.scene.add(ghostBlock);
 const saveManager = new SaveManager();
 
 // Villager NPCs
@@ -330,8 +343,13 @@ function gameLoop(now: number) {
 
   placeCooldown -= dt;
 
-  // Update systems
-  controller.update(dt);
+  // Update systems — skip normal movement when in boat
+  if (ridingBoat) {
+    // Only update mouse look, not movement/gravity
+    controller.updateCameraOnly(dt);
+  } else {
+    controller.update(dt);
+  }
   world.update(player.position.x, player.position.z);
 
   // Raycasting from the player's eye
@@ -690,24 +708,24 @@ function gameLoop(now: number) {
     fishingGame.cancelFishing();
   }
 
-  // Place block: right-click OR B/E key
-  const wantsPlace = input.rightClick || input.placeClick;
-  if (wantsPlace) {
-    let placeX: number, placeY: number, placeZ: number;
+  // Ghost preview block — shows where the block will be placed
+  if (raycaster.lastHit) {
+    const [bx, by, bz] = raycaster.lastHit.blockPos;
+    const [nx, ny, nz] = raycaster.lastHit.faceNormal;
+    ghostBlock.position.set(bx + nx + 0.5, by + ny + 0.5, bz + nz + 0.5);
+    ghostBlock.visible = true;
+  } else {
+    ghostBlock.visible = false;
+  }
 
-    if (raycaster.lastHit) {
-      const [bx, by, bz] = raycaster.lastHit.blockPos;
-      const [nx, ny, nz] = raycaster.lastHit.faceNormal;
-      placeX = bx + nx;
-      placeY = by + ny;
-      placeZ = bz + nz;
-    } else {
-      // Fallback: place 2 blocks in front of player at eye level
-      const dir = controller.getLookDirection();
-      placeX = Math.floor(player.position.x + dir.x * 3);
-      placeY = Math.floor(player.position.y + PLAYER_HEIGHT - 0.5 + dir.y * 3);
-      placeZ = Math.floor(player.position.z + dir.z * 3);
-    }
+  // Place block: right-click OR B/E key — only on existing block faces
+  const wantsPlace = input.rightClick || input.placeClick;
+  if (wantsPlace && raycaster.lastHit) {
+    const [bx, by, bz] = raycaster.lastHit.blockPos;
+    const [nx, ny, nz] = raycaster.lastHit.faceNormal;
+    const placeX = bx + nx;
+    const placeY = by + ny;
+    const placeZ = bz + nz;
 
     const px = player.position.x;
     const py = player.position.y;
@@ -766,9 +784,19 @@ function gameLoop(now: number) {
     if (input.isKeyDown("KeyA") || input.isKeyDown("ArrowLeft")) turn += 1;
     if (input.isKeyDown("KeyD") || input.isKeyDown("ArrowRight")) turn -= 1;
     ridingBoat.steer(fwd, turn, dt);
-    player.position.copy(ridingBoat.position);
-    player.position.y += 0.5;
-    player.yaw = ridingBoat.yaw;
+
+    // Player sits ON TOP of the boat, not sinking
+    player.position.x = ridingBoat.position.x;
+    player.position.z = ridingBoat.position.z;
+    player.position.y = ridingBoat.position.y + 0.3;
+    player.velocity.set(0, 0, 0);
+    player.isGrounded = true;
+
+    // Rowing animation when moving
+    const isRowing = fwd !== 0 || turn !== 0;
+    if (isRowing) {
+      controller.playerModel.triggerSwing();
+    }
   }
 
   // Drowning — player fully underwater loses health

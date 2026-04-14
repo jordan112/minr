@@ -89,11 +89,9 @@ export class TerrainGenerator {
         const wx = worldX + x;
         const wz = worldZ + z;
 
-        // Use noise to determine tree placement (deterministic)
         const treeVal = this.treeNoise(wx / 4, wz / 4);
         if (treeVal < 0.85) continue;
 
-        // Find surface
         let surfaceY = -1;
         for (let y = WORLD_HEIGHT - 1; y >= 0; y--) {
           if (chunk.getBlock(x, y, z) === BlockId.GRASS) {
@@ -103,28 +101,72 @@ export class TerrainGenerator {
         }
         if (surfaceY < 0) continue;
 
-        const trunkHeight = 4 + Math.floor(Math.abs(this.treeNoise(wx, wz)) * 3);
+        // Tree variety based on noise
+        const treeType = Math.abs(this.treeNoise(wx * 3, wz * 3));
+        // 0.0-0.3 = tall narrow (spruce), 0.3-0.6 = standard oak, 0.6-1.0 = short wide (fruit tree)
 
-        // Trunk
-        for (let dy = 1; dy <= trunkHeight; dy++) {
-          chunk.setBlock(x, surfaceY + dy, z, BlockId.WOOD);
-        }
-
-        // Leaves (sphere-ish)
-        const leafStart = trunkHeight - 2;
-        const leafTop = trunkHeight + 1;
-        for (let dy = leafStart; dy <= leafTop; dy++) {
-          const radius = dy === leafTop ? 1 : 2;
-          for (let dx = -radius; dx <= radius; dx++) {
-            for (let dz = -radius; dz <= radius; dz++) {
-              if (dx === 0 && dz === 0 && dy < trunkHeight) continue; // trunk position
-              const lx = x + dx;
-              const lz = z + dz;
-              const ly = surfaceY + dy;
-              if (lx < 0 || lx >= CHUNK_SIZE || lz < 0 || lz >= CHUNK_SIZE || ly >= WORLD_HEIGHT) continue;
-              if (Math.abs(dx) === radius && Math.abs(dz) === radius && Math.random() > 0.6) continue;
-              if (chunk.getBlock(lx, ly, lz) === BlockId.AIR) {
-                chunk.setBlock(lx, ly, lz, BlockId.LEAVES);
+        if (treeType < 0.3) {
+          // Tall narrow spruce
+          const trunkHeight = 6 + Math.floor(treeType * 10);
+          for (let dy = 1; dy <= trunkHeight; dy++) {
+            chunk.setBlock(x, surfaceY + dy, z, BlockId.WOOD);
+          }
+          // Cone-shaped leaves
+          for (let dy = 3; dy <= trunkHeight + 1; dy++) {
+            const radius = Math.max(0, Math.min(2, trunkHeight + 1 - dy));
+            for (let dx = -radius; dx <= radius; dx++) {
+              for (let dz = -radius; dz <= radius; dz++) {
+                if (dx === 0 && dz === 0 && dy <= trunkHeight) continue;
+                const lx = x + dx, lz = z + dz, ly = surfaceY + dy;
+                if (lx < 0 || lx >= CHUNK_SIZE || lz < 0 || lz >= CHUNK_SIZE || ly >= WORLD_HEIGHT) continue;
+                if (chunk.getBlock(lx, ly, lz) === BlockId.AIR) {
+                  chunk.setBlock(lx, ly, lz, BlockId.LEAVES);
+                }
+              }
+            }
+          }
+        } else if (treeType < 0.6) {
+          // Standard oak
+          const trunkHeight = 4 + Math.floor(Math.abs(this.treeNoise(wx, wz)) * 3);
+          for (let dy = 1; dy <= trunkHeight; dy++) {
+            chunk.setBlock(x, surfaceY + dy, z, BlockId.WOOD);
+          }
+          const leafStart = trunkHeight - 2;
+          const leafTop = trunkHeight + 1;
+          for (let dy = leafStart; dy <= leafTop; dy++) {
+            const radius = dy === leafTop ? 1 : 2;
+            for (let dx = -radius; dx <= radius; dx++) {
+              for (let dz = -radius; dz <= radius; dz++) {
+                if (dx === 0 && dz === 0 && dy < trunkHeight) continue;
+                const lx = x + dx, lz = z + dz, ly = surfaceY + dy;
+                if (lx < 0 || lx >= CHUNK_SIZE || lz < 0 || lz >= CHUNK_SIZE || ly >= WORLD_HEIGHT) continue;
+                if (Math.abs(dx) === radius && Math.abs(dz) === radius && Math.random() > 0.6) continue;
+                if (chunk.getBlock(lx, ly, lz) === BlockId.AIR) {
+                  chunk.setBlock(lx, ly, lz, BlockId.LEAVES);
+                }
+              }
+            }
+          }
+        } else {
+          // Short wide fruit tree — shorter trunk, wider canopy
+          const trunkHeight = 3;
+          for (let dy = 1; dy <= trunkHeight; dy++) {
+            chunk.setBlock(x, surfaceY + dy, z, BlockId.WOOD);
+          }
+          // Wide canopy with "fruit" (torch blocks as colorful dots)
+          for (let dy = trunkHeight - 1; dy <= trunkHeight + 2; dy++) {
+            const radius = dy === trunkHeight + 2 ? 1 : 3;
+            for (let dx = -radius; dx <= radius; dx++) {
+              for (let dz = -radius; dz <= radius; dz++) {
+                if (dx === 0 && dz === 0 && dy <= trunkHeight) continue;
+                const lx = x + dx, lz = z + dz, ly = surfaceY + dy;
+                if (lx < 0 || lx >= CHUNK_SIZE || lz < 0 || lz >= CHUNK_SIZE || ly >= WORLD_HEIGHT) continue;
+                if (Math.abs(dx) === radius && Math.abs(dz) === radius) continue;
+                if (chunk.getBlock(lx, ly, lz) === BlockId.AIR) {
+                  // Occasionally place "fruit" (torch = yellow dot) among leaves
+                  const isFruit = Math.abs(dx) > 1 && Math.abs(dz) > 1 && Math.random() < 0.3 && dy < trunkHeight + 2;
+                  chunk.setBlock(lx, ly, lz, isFruit ? BlockId.TORCH : BlockId.LEAVES);
+                }
               }
             }
           }
