@@ -134,25 +134,27 @@ export class TerrainGenerator {
   }
 
   private generateLava(chunk: Chunk, worldX: number, worldZ: number): void {
-    // Small lava pools on the surface — rare
-    for (let x = 2; x < CHUNK_SIZE - 2; x++) {
-      for (let z = 2; z < CHUNK_SIZE - 2; z++) {
+    // Very rare lava pools — only in rocky/stone areas
+    for (let x = 3; x < CHUNK_SIZE - 3; x++) {
+      for (let z = 3; z < CHUNK_SIZE - 3; z++) {
         const wx = worldX + x;
         const wz = worldZ + z;
 
-        const lavaNoise = this.noise2D(wx / 20 + 1000, wz / 20 + 1000);
-        if (lavaNoise > 0.75) {
-          // Find surface
-          for (let y = WORLD_HEIGHT - 1; y >= 1; y--) {
-            const block = chunk.getBlock(x, y, z);
-            if (block === BlockId.GRASS || block === BlockId.DIRT || block === BlockId.STONE) {
-              // Replace with lava pool (1-2 blocks deep)
-              chunk.setBlock(x, y, z, BlockId.LAVA);
-              if (chunk.getBlock(x, y - 1, z) === BlockId.DIRT || chunk.getBlock(x, y - 1, z) === BlockId.STONE) {
-                chunk.setBlock(x, y - 1, z, BlockId.LAVA);
-              }
-              break;
-            }
+        // Two noise checks: one for rarity, one for "rocky area"
+        const lavaNoise = this.noise2D(wx / 15 + 1000, wz / 15 + 1000);
+        if (lavaNoise < 0.92) continue; // very rare — only ~4% of noise peaks
+
+        // Find surface — only place on stone (rocky areas)
+        for (let y = WORLD_HEIGHT - 1; y >= 1; y--) {
+          const block = chunk.getBlock(x, y, z);
+          if (block === BlockId.STONE) {
+            // Surrounded by stone = rocky area, place lava
+            chunk.setBlock(x, y, z, BlockId.LAVA);
+            break;
+          }
+          // If we hit grass or dirt first, skip — not rocky enough
+          if (block === BlockId.GRASS || block === BlockId.DIRT || block === BlockId.SAND) {
+            break;
           }
         }
       }
