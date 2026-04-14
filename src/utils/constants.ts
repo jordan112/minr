@@ -10,5 +10,5 @@ export const PLAYER_WIDTH = 0.6;
 export const PLAYER_SPEED = 5;
 export const MOUSE_SENSITIVITY = 0.002;
 
-export const MAX_RAY_DISTANCE = 6;
+export const MAX_RAY_DISTANCE = 10;
 export const MAX_DELTA_TIME = 0.05; // 20 FPS minimum simulation

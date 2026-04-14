@@ -42,15 +42,20 @@ const fishingGame = new FishingGame();
 const signs = new SignManager(sceneManager.scene, world);
 const loot = new LootPopup();
 
-// Ghost preview block for building
+// Ghost preview block for building — wireframe + transparent fill
 const ghostGeo = new THREE.BoxGeometry(1.01, 1.01, 1.01);
 const ghostMat = new THREE.MeshBasicMaterial({
-  color: 0xffffff,
+  color: 0x44ff44,
   transparent: true,
-  opacity: 0.25,
-  wireframe: false,
+  opacity: 0.3,
 });
 const ghostBlock = new THREE.Mesh(ghostGeo, ghostMat);
+// Add wireframe edges
+const ghostEdges = new THREE.LineSegments(
+  new THREE.EdgesGeometry(ghostGeo),
+  new THREE.LineBasicMaterial({ color: 0x44ff44, linewidth: 2 })
+);
+ghostBlock.add(ghostEdges);
 ghostBlock.visible = false;
 ghostBlock.renderOrder = 2;
 sceneManager.scene.add(ghostBlock);
@@ -736,25 +741,46 @@ function gameLoop(now: number) {
     fishingGame.cancelFishing();
   }
 
-  // Ghost preview block — shows where the block will be placed
+  // Calculate where a block would be placed
+  let placeX = 0, placeY = 0, placeZ = 0;
+  let hasPlaceTarget = false;
+
   if (raycaster.lastHit) {
+    // Place adjacent to the block face we're looking at
     const [bx, by, bz] = raycaster.lastHit.blockPos;
     const [nx, ny, nz] = raycaster.lastHit.faceNormal;
-    ghostBlock.position.set(bx + nx + 0.5, by + ny + 0.5, bz + nz + 0.5);
-    ghostBlock.visible = true;
+    placeX = bx + nx;
+    placeY = by + ny;
+    placeZ = bz + nz;
+    hasPlaceTarget = true;
   } else {
-    ghostBlock.visible = false;
+    // Fallback: place 3 blocks in front of player, snapped to ground
+    const dir = controller.getLookDirection();
+    placeX = Math.floor(player.position.x + dir.x * 3);
+    placeZ = Math.floor(player.position.z + dir.z * 3);
+    // Find the ground at that position
+    placeY = Math.floor(player.position.y);
+    for (let y = placeY + 3; y >= placeY - 3; y--) {
+      if (isSolid(world.getBlock(placeX, y, placeZ)) && !isSolid(world.getBlock(placeX, y + 1, placeZ))) {
+        placeY = y + 1;
+        hasPlaceTarget = true;
+        break;
+      }
+    }
+    // If still no ground, just place at look height
+    if (!hasPlaceTarget) {
+      placeY = Math.floor(player.position.y + PLAYER_HEIGHT * 0.5 + dir.y * 3);
+      hasPlaceTarget = true;
+    }
   }
 
-  // Place block: right-click OR B/E key — only on existing block faces
-  const wantsPlace = input.rightClick || input.placeClick;
-  if (wantsPlace && raycaster.lastHit) {
-    const [bx, by, bz] = raycaster.lastHit.blockPos;
-    const [nx, ny, nz] = raycaster.lastHit.faceNormal;
-    const placeX = bx + nx;
-    const placeY = by + ny;
-    const placeZ = bz + nz;
+  // Ghost preview block
+  ghostBlock.position.set(placeX + 0.5, placeY + 0.5, placeZ + 0.5);
+  ghostBlock.visible = hasPlaceTarget;
 
+  // Place block: B/E key or right-click
+  const wantsPlace = input.rightClick || input.placeClick;
+  if (wantsPlace && hasPlaceTarget) {
     const px = player.position.x;
     const py = player.position.y;
     const pz = player.position.z;
@@ -763,7 +789,7 @@ function gameLoop(now: number) {
       placeZ >= Math.floor(pz - 0.3) && placeZ <= Math.floor(pz + 0.3) &&
       placeY >= Math.floor(py) && placeY <= Math.floor(py + PLAYER_HEIGHT);
 
-    if (!playerOverlaps) {
+    if (!playerOverlaps && !isSolid(world.getBlock(placeX, placeY, placeZ))) {
       world.setBlock(placeX, placeY, placeZ, PLACEABLE_BLOCKS[player.selectedBlockIndex]!);
       sound.playBlockPlace();
     }
