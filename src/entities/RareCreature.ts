@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { World } from "../world/World";
-import { isSolid } from "../world/BlockType";
+import { isSolid, BlockId } from "../world/BlockType";
 
 export type RareType = "trex" | "bigfoot" | "dragon" | "unicorn" | "yeti";
 
@@ -386,6 +386,18 @@ export class RareCreature {
       this.position.x -= Math.sin(this.currentYaw) * this.config.speed * dt;
       this.position.z -= Math.cos(this.currentYaw) * this.config.speed * dt;
       this.velocity.y = 5;
+    }
+
+    // Avoid water — reverse movement and turn around
+    const footBlock = this.world.getBlock(
+      Math.floor(this.position.x),
+      Math.floor(this.position.y),
+      Math.floor(this.position.z)
+    );
+    if (footBlock === BlockId.WATER) {
+      this.position.x -= Math.sin(this.currentYaw) * this.config.speed * dt;
+      this.position.z -= Math.cos(this.currentYaw) * this.config.speed * dt;
+      this.currentYaw += Math.PI;
     }
 
     // Gravity

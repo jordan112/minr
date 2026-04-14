@@ -21,6 +21,7 @@ import { Zombie } from "./entities/Zombie";
 import { RareCreature, ALL_RARE_TYPES } from "./entities/RareCreature";
 import type { RareType } from "./entities/RareCreature";
 import { LootPopup, rollLoot } from "./ui/LootPopup";
+import { Boat } from "./entities/Boat";
 import { SaveManager } from "./save/SaveManager";
 
 // --- Init ---
@@ -45,16 +46,31 @@ const saveManager = new SaveManager();
 // Villager NPCs
 const villagers: Villager[] = [];
 function spawnVillagers() {
-  // Spawn 3 villagers near origin
   for (let i = 0; i < 3; i++) {
-    const vx = (Math.random() - 0.5) * 20;
-    const vz = (Math.random() - 0.5) * 20;
-    const v = new Villager(world, vx, 80, vz);
-    villagers.push(v);
-    sceneManager.scene.add(v.group);
+    // Find a land position near origin
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const vx = (Math.random() - 0.5) * 30;
+      const vz = (Math.random() - 0.5) * 30;
+      let vy = -1;
+      for (let y = 80; y >= 1; y--) {
+        const block = world.getBlock(Math.floor(vx), y, Math.floor(vz));
+        if (block === BlockId.GRASS || block === BlockId.DIRT || block === BlockId.SAND) {
+          vy = y + 1;
+          break;
+        }
+        if (block === BlockId.WATER) break; // skip water spots
+      }
+      if (vy > 0) {
+        const v = new Villager(world, vx, vy, vz);
+        villagers.push(v);
+        sceneManager.scene.add(v.group);
+        break;
+      }
+    }
   }
 }
-spawnVillagers();
+// Delay villager spawn so chunks are loaded first
+setTimeout(spawnVillagers, 1000);
 
 // Zombie enemies
 const zombies: Zombie[] = [];
@@ -66,6 +82,11 @@ let isPaused = false;
 // Rare creatures
 const rareCreatures: RareCreature[] = [];
 let rareSpawnTimer = 30;
+
+// Boats
+const boats: Boat[] = [];
+let boatSpawnTimer = 5;
+let ridingBoat: Boat | null = null;
 
 // Auto-load saved game if exists
 const savedGame = saveManager.load();
@@ -166,6 +187,30 @@ document.addEventListener("keydown", (e) => {
     const data = saveManager.load();
     if (data) {
       dayTime = saveManager.applyLoad(data, player, world);
+    }
+  }
+
+  // X to enter/exit boat
+  if (e.code === "KeyX") {
+    if (ridingBoat) {
+      // Exit boat
+      ridingBoat.isOccupied = false;
+      ridingBoat = null;
+      player.position.y += 1;
+    } else {
+      // Find nearest boat
+      let nearestBoat: Boat | null = null;
+      let nearestDist = 4;
+      for (const b of boats) {
+        const bdx = b.position.x - player.position.x;
+        const bdz = b.position.z - player.position.z;
+        const bd = Math.sqrt(bdx * bdx + bdz * bdz);
+        if (bd < nearestDist) { nearestDist = bd; nearestBoat = b; }
+      }
+      if (nearestBoat) {
+        ridingBoat = nearestBoat;
+        ridingBoat.isOccupied = true;
+      }
     }
   }
 
@@ -590,6 +635,7 @@ function gameLoop(now: number) {
         controller.playerModel.triggerSwing();
         sound.playBlockBreak();
         if (!wasDead && rareTarget.isDead) {
+          sound.playMonsterDeath();
           const drop = rollLoot(rareTarget.type);
           const lvl = player.addXP(drop.xp);
           loot.show(`+${drop.item}  +${drop.xp} XP` + (lvl ? "  LEVEL UP!" : ""), "#ff66ff");
@@ -600,6 +646,7 @@ function gameLoop(now: number) {
         controller.playerModel.triggerSwing();
         sound.playBlockBreak();
         if (!wasDead && zombieTarget.isDead) {
+          sound.playMonsterDeath();
           const drop = rollLoot("zombie");
           const lvl = player.addXP(drop.xp);
           loot.show(`+${drop.item}  +${drop.xp} XP` + (lvl ? "  LEVEL UP!" : ""), "#aaffaa");
@@ -671,6 +718,83 @@ function gameLoop(now: number) {
     if (!playerOverlaps) {
       world.setBlock(placeX, placeY, placeZ, PLACEABLE_BLOCKS[player.selectedBlockIndex]!);
       sound.playBlockPlace();
+    }
+  }
+
+  // Boat spawning (in water)
+  boatSpawnTimer -= dt;
+  if (boatSpawnTimer <= 0 && boats.length < 5) {
+    boatSpawnTimer = 15 + Math.random() * 20;
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 15 + Math.random() * 30;
+    const bx = player.position.x + Math.cos(angle) * dist;
+    const bz = player.position.z + Math.sin(angle) * dist;
+    // Find water
+    for (let y = 60; y >= 1; y--) {
+      if (world.getBlock(Math.floor(bx), y, Math.floor(bz)) === BlockId.WATER &&
+          world.getBlock(Math.floor(bx), y + 1, Math.floor(bz)) === BlockId.AIR) {
+        const boat = new Boat(world, bx, y + 0.9, bz);
+        boats.push(boat);
+        sceneManager.scene.add(boat.group);
+        break;
+      }
+    }
+  }
+
+  // Update boats
+  for (let i = boats.length - 1; i >= 0; i--) {
+    const boat = boats[i]!;
+    if (boat !== ridingBoat) {
+      boat.update(dt);
+    }
+    // Despawn far boats
+    const bdx = boat.position.x - player.position.x;
+    const bdz = boat.position.z - player.position.z;
+    if (bdx * bdx + bdz * bdz > 80 * 80 && boat !== ridingBoat) {
+      sceneManager.scene.remove(boat.group);
+      boats.splice(i, 1);
+    }
+  }
+
+  // Boat riding: Enter/exit with X key handled in keydown
+  if (ridingBoat) {
+    let fwd = 0, turn = 0;
+    if (input.isKeyDown("KeyW") || input.isKeyDown("ArrowUp")) fwd += 1;
+    if (input.isKeyDown("KeyS") || input.isKeyDown("ArrowDown")) fwd -= 1;
+    if (input.isKeyDown("KeyA") || input.isKeyDown("ArrowLeft")) turn += 1;
+    if (input.isKeyDown("KeyD") || input.isKeyDown("ArrowRight")) turn -= 1;
+    ridingBoat.steer(fwd, turn, dt);
+    player.position.copy(ridingBoat.position);
+    player.position.y += 0.5;
+    player.yaw = ridingBoat.yaw;
+  }
+
+  // Drowning — player fully underwater loses health
+  const headY = Math.floor(player.position.y + PLAYER_HEIGHT);
+  const blockAtHead = world.getBlock(
+    Math.floor(player.position.x), headY, Math.floor(player.position.z)
+  );
+  if (blockAtHead === BlockId.WATER && !ridingBoat) {
+    player.takeDamage(1);
+  }
+
+  // Zombie ambient groans (when nearby)
+  for (const z of zombies) {
+    if (z.isDead) continue;
+    const zdx = z.position.x - player.position.x;
+    const zdz = z.position.z - player.position.z;
+    if (zdx * zdx + zdz * zdz < 20 * 20 && Math.random() < dt * 0.1) {
+      sound.playZombieGroan();
+    }
+  }
+
+  // Rare creature roars (when nearby and hostile)
+  for (const rc of rareCreatures) {
+    if (rc.isDead) continue;
+    const rdx = rc.position.x - player.position.x;
+    const rdz = rc.position.z - player.position.z;
+    if (rdx * rdx + rdz * rdz < 25 * 25 && Math.random() < dt * 0.05) {
+      sound.playRoar();
     }
   }
 

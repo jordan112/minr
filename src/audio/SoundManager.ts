@@ -279,6 +279,118 @@ export class SoundManager {
     osc.stop(now + 0.5);
   }
 
+  // --- Monster Sounds ---
+
+  playZombieGroan(): void {
+    const ctx = this.getCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    // Low rumbling groan — sawtooth sweeping down through sub-bass
+    const osc = ctx.createOscillator();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(80, now);
+    osc.frequency.linearRampToValueAtTime(60, now + 0.6);
+
+    // Slow vibrato for an unsettling wobble
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = 4;
+    const lfoGain = ctx.createGain();
+    lfoGain.gain.value = 8;
+    lfo.connect(lfoGain).connect(osc.frequency);
+    lfo.start(now);
+    lfo.stop(now + 0.6);
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.value = 200;
+    filter.Q.value = 2;
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.18, now + 0.08);
+    gain.gain.setValueAtTime(0.18, now + 0.35);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+
+    osc.connect(filter).connect(gain).connect(this.sfxGain);
+    osc.start(now);
+    osc.stop(now + 0.6);
+  }
+
+  playRoar(): void {
+    const ctx = this.getCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    // Deep powerful roar — sawtooth sweeping down with noise layer
+    const osc = ctx.createOscillator();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(100, now);
+    osc.frequency.linearRampToValueAtTime(70, now + 0.3);
+    osc.frequency.linearRampToValueAtTime(50, now + 0.8);
+
+    const oscGain = ctx.createGain();
+    oscGain.gain.setValueAtTime(0.001, now);
+    oscGain.gain.linearRampToValueAtTime(0.35, now + 0.05);
+    oscGain.gain.setValueAtTime(0.35, now + 0.5);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.value = 350;
+
+    osc.connect(oscGain).connect(filter).connect(this.sfxGain);
+    osc.start(now);
+    osc.stop(now + 0.8);
+
+    // Noise layer for textured growl
+    const noiseBufSize = Math.floor(ctx.sampleRate * 0.8);
+    const noiseBuf = ctx.createBuffer(1, noiseBufSize, ctx.sampleRate);
+    const noiseData = noiseBuf.getChannelData(0);
+    for (let i = 0; i < noiseBufSize; i++) {
+      noiseData[i] = (Math.random() * 2 - 1);
+    }
+    const noiseSrc = ctx.createBufferSource();
+    noiseSrc.buffer = noiseBuf;
+
+    const noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = "bandpass";
+    noiseFilter.frequency.value = 250;
+    noiseFilter.Q.value = 1.5;
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.001, now);
+    noiseGain.gain.linearRampToValueAtTime(0.2, now + 0.05);
+    noiseGain.gain.setValueAtTime(0.2, now + 0.5);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+
+    noiseSrc.connect(noiseFilter).connect(noiseGain).connect(this.sfxGain);
+    noiseSrc.start(now);
+    noiseSrc.stop(now + 0.8);
+  }
+
+  playMonsterDeath(): void {
+    const ctx = this.getCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    // Descending pitch death cry — sine dropping from 400Hz to 80Hz
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(400, now);
+    osc.frequency.exponentialRampToValueAtTime(80, now + 0.5);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.3, now + 0.03);
+    gain.gain.setValueAtTime(0.3, now + 0.2);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+    osc.connect(gain).connect(this.sfxGain);
+    osc.start(now);
+    osc.stop(now + 0.5);
+  }
+
   playSplash(): void {
     const ctx = this.getCtx();
     if (!ctx) return;

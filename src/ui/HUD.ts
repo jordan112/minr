@@ -278,8 +278,95 @@ export class HUD {
       cursor: "pointer",
       zIndex: "200",
     });
+    // Generate pixelated MINR logo
+    const logoCanvas = document.createElement("canvas");
+    logoCanvas.width = 256;
+    logoCanvas.height = 64;
+    const lctx = logoCanvas.getContext("2d")!;
+
+    // 5x7 pixel font grids for M, I, N, R
+    const letters: number[][][] = [
+      // M
+      [
+        [1,0,0,0,1],
+        [1,1,0,1,1],
+        [1,0,1,0,1],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+      ],
+      // I
+      [
+        [1,1,1,1,1],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [1,1,1,1,1],
+      ],
+      // N
+      [
+        [1,0,0,0,1],
+        [1,1,0,0,1],
+        [1,0,1,0,1],
+        [1,0,0,1,1],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+      ],
+      // R
+      [
+        [1,1,1,1,0],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,1,1,1,0],
+        [1,0,1,0,0],
+        [1,0,0,1,0],
+        [1,0,0,0,1],
+      ],
+    ];
+
+    const pixelSize = 6;
+    const letterW = 5 * pixelSize;
+    const letterH = 7 * pixelSize;
+    const gap = 10;
+    const totalW = letters.length * letterW + (letters.length - 1) * gap;
+    const offsetX = Math.floor((256 - totalW) / 2);
+    const offsetY = Math.floor((64 - letterH) / 2);
+
+    for (let li = 0; li < letters.length; li++) {
+      const grid = letters[li]!;
+      const lx = offsetX + li * (letterW + gap);
+      for (let row = 0; row < 7; row++) {
+        for (let col = 0; col < 5; col++) {
+          if (!grid[row]![col]) continue;
+          const px = lx + col * pixelSize;
+          const py = offsetY + row * pixelSize;
+          // Gradient: green (#22cc66) to blue (#2266ff) across all letters
+          const t = (li * 5 + col) / (letters.length * 5 - 1);
+          const r = Math.round(0x22 + (0x22 - 0x22) * t);
+          const g = Math.round(0xcc + (0x66 - 0xcc) * t);
+          const b = Math.round(0x66 + (0xff - 0x66) * t);
+          // Dark outline/shadow (offset +2, +2)
+          lctx.fillStyle = "rgba(0,0,0,0.6)";
+          lctx.fillRect(px + 2, py + 2, pixelSize, pixelSize);
+          // Main pixel
+          lctx.fillStyle = `rgb(${r},${g},${b})`;
+          lctx.fillRect(px, py, pixelSize, pixelSize);
+          // Highlight on top-left of each pixel for a 3D blocky look
+          lctx.fillStyle = "rgba(255,255,255,0.2)";
+          lctx.fillRect(px, py, pixelSize, 1);
+          lctx.fillRect(px, py, 1, pixelSize);
+        }
+      }
+    }
+
+    const logoDataURL = logoCanvas.toDataURL();
+
     overlay.innerHTML = `
-      <div style="margin-bottom:20px;font-weight:bold;font-size:36px">MINR</div>
+      <img src="${logoDataURL}" style="margin-bottom:20px;image-rendering:pixelated" width="256" height="64" alt="MINR">
       <div style="font-size:18px;margin-bottom:20px">Click to play</div>
       <div style="font-size:13px;opacity:0.8;line-height:2.2;text-align:left;max-width:420px">
         <b>MOVE:</b> WASD / Arrows &nbsp;&nbsp; <b>JUMP:</b> Space<br>
@@ -288,7 +375,8 @@ export class HUD {
         <b>BREAK:</b> Left-click breaks blocks or attacks<br>
         <b>TOOLS:</b> Tab / Q to cycle (Hand, Pick, Axe, Sword, Rod)<br>
         <b>FISH:</b> F = equip rod &nbsp; C or Left-click = cast &nbsp; Hold click to reel<br>
-        <b style="color:#ffaa33">SPAWN:</b> G to spawn creatures (T-Rex, Dragon, etc.)<br>
+        <b>BOAT:</b> X to enter/exit boats on water<br>
+        <b style="color:#ffaa33">SPAWN:</b> G to spawn creatures<br>
         <b>HEAL:</b> Stay safe 3s to auto-regen &nbsp; <b>PAUSE:</b> P<br>
         <b>SAVE:</b> Ctrl+S (autosaves every 30s) &nbsp; <b>LOAD:</b> L<br>
         <b>RESET:</b> R &nbsp; <b>MUSIC:</b> M &nbsp; <b>DEBUG:</b> F3

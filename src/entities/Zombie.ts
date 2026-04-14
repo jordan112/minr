@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { World } from "../world/World";
-import { isSolid } from "../world/BlockType";
+import { isSolid, BlockId } from "../world/BlockType";
 
 export class Zombie {
   group: THREE.Group;
@@ -136,6 +136,18 @@ export class Zombie {
         this.position.z -= Math.cos(this.currentYaw) * speed * dt;
         this.currentYaw += Math.PI;
       }
+    }
+
+    // Avoid water — reverse movement and turn around
+    const footBlock = this.world.getBlock(
+      Math.floor(this.position.x),
+      Math.floor(this.position.y),
+      Math.floor(this.position.z)
+    );
+    if (footBlock === BlockId.WATER) {
+      this.position.x -= Math.sin(this.currentYaw) * 2 * dt;
+      this.position.z -= Math.cos(this.currentYaw) * 2 * dt;
+      this.currentYaw += Math.PI;
     }
 
     // Gravity
