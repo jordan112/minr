@@ -171,12 +171,12 @@ export class FishingGame {
       this.state = "reeling";
       this.fishName = FISH_NAMES[Math.floor(Math.random() * FISH_NAMES.length)]!;
       this.fishIcon.textContent = "\ud83d\udc1f " + this.fishName;
-      this.statusText.textContent = "Hold click to reel in!";
+      this.statusText.textContent = "Hold click = move marker right. Release = drifts left. Keep it in the green!";
       this.barContainer.style.display = "block";
       this.markerPos = 50;
       this.markerVel = 0;
-      this.greenZonePos = 30 + Math.random() * 40;
-      this.greenZoneSize = 20 + Math.random() * 15;
+      this.greenZonePos = 25 + Math.random() * 30;
+      this.greenZoneSize = 35; // start big
       this.fishProgress = 0;
       this.reelingTime = 0;
     }
@@ -226,24 +226,24 @@ export class FishingGame {
       this.statusText.style.color = "white";
       this.statusText.style.opacity = "1";
 
-      // Green zone moves back and forth
-      this.greenZonePos += this.greenZoneDir * 30 * dt;
+      // Green zone moves slowly back and forth
+      this.greenZonePos += this.greenZoneDir * 15 * dt;
       if (this.greenZonePos > 100 - this.greenZoneSize) {
         this.greenZoneDir = -1;
       } else if (this.greenZonePos < 0) {
         this.greenZoneDir = 1;
       }
 
-      // Make it harder over time — shrink green zone
-      this.greenZoneSize = Math.max(12, 25 - this.reelingTime * 1.5);
+      // Shrink slowly — stays large for a while
+      this.greenZoneSize = Math.max(20, 35 - this.reelingTime * 0.8);
 
-      // Marker physics — holding click pushes up, gravity pulls down
+      // Marker physics — tap/hold click to push marker right, drifts left
       if (this.holdingClick) {
-        this.markerVel += 200 * dt;
+        this.markerVel += 120 * dt;
       } else {
-        this.markerVel -= 150 * dt;
+        this.markerVel -= 80 * dt;
       }
-      this.markerVel *= 0.92; // damping
+      this.markerVel *= 0.9; // smooth damping
       this.markerPos += this.markerVel * dt;
       this.markerPos = Math.max(0, Math.min(100, this.markerPos));
 
@@ -252,13 +252,13 @@ export class FishingGame {
                      this.markerPos <= this.greenZonePos + this.greenZoneSize;
 
       if (inZone) {
-        this.fishProgress += 25 * dt;
+        this.fishProgress += 35 * dt; // fills faster
         this.marker.style.background = "#66ff66";
         this.statusText.textContent = "Reeling in " + this.fishName + "!";
       } else {
-        this.fishProgress -= 15 * dt;
+        this.fishProgress -= 8 * dt; // drains much slower
         this.marker.style.background = "#ff6666";
-        this.statusText.textContent = "Keep it in the green!";
+        this.statusText.textContent = "Hold/release click to stay in green!";
       }
 
       this.fishProgress = Math.max(0, Math.min(100, this.fishProgress));
@@ -280,8 +280,8 @@ export class FishingGame {
         setTimeout(() => this.cancelFishing(), 2500);
       }
 
-      // Lose — if progress drops to 0 after getting some
-      if (this.fishProgress <= 0 && this.reelingTime > 3) {
+      // Lose — only if progress drops to 0 after a long time
+      if (this.fishProgress <= 0 && this.reelingTime > 8) {
         this.state = "lost";
         this.statusText.textContent = "The " + this.fishName + " got away!";
         this.statusText.style.color = "#ff6666";
