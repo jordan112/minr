@@ -159,8 +159,8 @@ document.addEventListener("keydown", (e) => {
     hud.setTool(currentTool);
   }
 
-  // C to cast fishing line (when holding rod)
-  if (e.code === "KeyC" && currentTool === ToolType.FISHING_ROD && fishingGame.state === "idle") {
+  // C to cast fishing line (when holding rod and looking at water)
+  if (e.code === "KeyC" && currentTool === ToolType.FISHING_ROD && fishingGame.state === "idle" && raycaster.lastWaterHit) {
     fishingGame.startFishing();
     controller.playerModel.triggerSwing();
     sound.playSplash();
@@ -583,10 +583,12 @@ function gameLoop(now: number) {
     if (currentTool === ToolType.FISHING_ROD) {
       // Fishing rod: cast or interact with mini-game
       if (fishingGame.state === "idle") {
-        // Cast — just start fishing (don't require aiming at water)
-        fishingGame.startFishing();
-        controller.playerModel.triggerSwing();
-        sound.playSplash();
+        // Only cast if looking at water
+        if (raycaster.lastWaterHit) {
+          fishingGame.startFishing();
+          controller.playerModel.triggerSwing();
+          sound.playSplash();
+        }
       } else if (fishingGame.state === "bite" || fishingGame.state === "reeling") {
         fishingGame.onMouseDown();
       }
