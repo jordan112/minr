@@ -173,10 +173,21 @@ document.addEventListener("keydown", (e) => {
     hud.setTool(currentTool);
   }
 
-  // C to cast fishing line (when holding rod and looking at water)
-  if (e.code === "KeyC" && currentTool === ToolType.FISHING_ROD && fishingGame.state === "idle" && raycaster.lastWaterHit) {
-    const [wx, wy, wz] = raycaster.lastWaterHit.blockPos;
-    fishingGame.setCastPosition(new THREE.Vector3(wx + 0.5, wy + 0.5, wz + 0.5));
+  // C to cast fishing line (when holding rod)
+  if (e.code === "KeyC" && currentTool === ToolType.FISHING_ROD && fishingGame.state === "idle") {
+    // Place fish at a spot in front of the player near water level
+    const dir = controller.getLookDirection();
+    const castX = player.position.x + dir.x * 5;
+    const castZ = player.position.z + dir.z * 5;
+    // Find water surface nearby
+    let castY = player.position.y;
+    for (let y = Math.floor(player.position.y) + 3; y >= Math.floor(player.position.y) - 5; y--) {
+      if (world.getBlock(Math.floor(castX), y, Math.floor(castZ)) === BlockId.WATER) {
+        castY = y + 0.5;
+        break;
+      }
+    }
+    fishingGame.setCastPosition(new THREE.Vector3(castX, castY, castZ));
     fishingGame.startFishing();
     controller.playerModel.triggerSwing();
     sound.playSplash();
