@@ -608,7 +608,7 @@ function gameLoop(now: number) {
           sound.playSplash();
         }
       } else if (fishingGame.state === "bite" || fishingGame.state === "reeling") {
-        fishingGame.onMouseDown();
+        fishingGame.onClick();
       }
     } else {
       // Normal attack/break
@@ -691,15 +691,6 @@ function gameLoop(now: number) {
         controller.playerModel.triggerSwing();
         sound.playBlockBreak();
       }
-    }
-  }
-
-  // Fishing reeling: hold mouse to reel
-  if (fishingGame.state === "reeling") {
-    if (input.leftHeld) {
-      fishingGame.onMouseDown();
-    } else {
-      fishingGame.onMouseUp();
     }
   }
 
