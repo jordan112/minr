@@ -30,6 +30,7 @@ export class TextureManager {
       BlockId.LAVA, BlockId.TORCH, BlockId.TNT,
       BlockId.WIRE, BlockId.LEVER, BlockId.LAMP, BlockId.DOOR,
       BlockId.GRAVEL, BlockId.FIRE, BlockId.GLASS,
+      BlockId.FLOWER_RED, BlockId.FLOWER_BLUE,
     ]) {
       const def = getBlockDef(blockId);
       if (!def) continue;

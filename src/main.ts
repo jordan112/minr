@@ -551,7 +551,9 @@ function gameLoop(now: number) {
     const rz = player.position.z + Math.sin(angle) * dist;
     let ry = -1;
     for (let y = 80; y >= 1; y--) {
-      if (isSolid(world.getBlock(Math.floor(rx), y, Math.floor(rz)))) { ry = y + 1; break; }
+      const block = world.getBlock(Math.floor(rx), y, Math.floor(rz));
+      if (block === BlockId.WATER || block === BlockId.LAVA) { ry = -1; break; } // skip water
+      if (isSolid(block)) { ry = y + 1; break; }
     }
     if (ry > 0) {
       // Hostile rares only at night, passive anytime

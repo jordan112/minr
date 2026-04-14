@@ -215,15 +215,17 @@ export class TerrainGenerator {
         const wx = worldX + x;
         const wz = worldZ + z;
 
-        if (this.treeNoise(wx / 2 + 2000, wz / 2 + 2000) <= 0.7) continue;
+        const flowerNoise = this.treeNoise(wx / 2 + 2000, wz / 2 + 2000);
+        if (flowerNoise <= 0.65) continue;
 
         // Find surface grass block
         for (let y = WORLD_HEIGHT - 1; y >= 1; y--) {
           const block = chunk.getBlock(x, y, z);
           if (block === BlockId.GRASS) {
-            // Place flower on top if air above
             if (y + 1 < WORLD_HEIGHT && chunk.getBlock(x, y + 1, z) === BlockId.AIR) {
-              chunk.setBlock(x, y + 1, z, BlockId.TORCH);
+              // Alternate between red and blue flowers
+              const flowerType = this.treeNoise(wx * 7, wz * 7) > 0 ? BlockId.FLOWER_RED : BlockId.FLOWER_BLUE;
+              chunk.setBlock(x, y + 1, z, flowerType);
             }
             break;
           }

@@ -20,6 +20,8 @@ export enum BlockId {
   GRAVEL = 16,
   FIRE = 17,
   GLASS = 18,
+  FLOWER_RED = 19,
+  FLOWER_BLUE = 20,
 }
 
 export interface BlockDef {
@@ -82,6 +84,8 @@ def(BlockId.DOOR, "Door", { top: "#6b4226", bottom: "#6b4226", side: "#5a3a20" }
 def(BlockId.GRAVEL, "Gravel", { top: "#888877", bottom: "#888877", side: "#888877" }, { gravity: true }, 3, 0);
 def(BlockId.FIRE, "Fire", { top: "#ff6600", bottom: "#ff4400", side: "#ff5500" }, { isSolid: false, isTransparent: true, emitsLight: true }, 3, 3);
 def(BlockId.GLASS, "Glass", { top: "#aaddff", bottom: "#aaddff", side: "#aaddff" }, { isTransparent: true }, 3, 6);
+def(BlockId.FLOWER_RED, "Poppy", { top: "#ff2222", bottom: "#22aa22", side: "#ff2222" }, { isSolid: false, isTransparent: true }, 3, 9);
+def(BlockId.FLOWER_BLUE, "Bluebell", { top: "#4444ff", bottom: "#22aa22", side: "#4444ff" }, { isSolid: false, isTransparent: true }, 3, 12);
 
 export function getBlockDef(id: BlockId): BlockDef | undefined {
   return BLOCK_DEFS.get(id);
