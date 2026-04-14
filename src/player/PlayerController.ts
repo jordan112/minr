@@ -18,7 +18,7 @@ export class PlayerController {
   private input: InputManager;
   private world: World;
   playerModel: PlayerModel;
-  isThirdPerson = true;
+  isThirdPerson = false; // start in first person like Minecraft
   isMoving = false;
   justJumped = false;
 
@@ -28,8 +28,9 @@ export class PlayerController {
     this.input = input;
     this.world = world;
 
-    // Create player model
+    // Create player model (hidden in first person)
     this.playerModel = new PlayerModel();
+    this.playerModel.group.visible = this.isThirdPerson;
     scene.add(this.playerModel.group);
   }
 

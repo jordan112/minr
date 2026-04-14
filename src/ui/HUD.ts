@@ -302,95 +302,148 @@ export class HUD {
       cursor: "pointer",
       zIndex: "200",
     });
-    // Generate pixelated MINR logo
+    // Generate MINR logo — torch for I, stone block letters
     const logoCanvas = document.createElement("canvas");
-    logoCanvas.width = 256;
-    logoCanvas.height = 64;
+    logoCanvas.width = 480;
+    logoCanvas.height = 120;
     const lctx = logoCanvas.getContext("2d")!;
 
-    // 5x7 pixel font grids for M, I, N, R
-    const letters: number[][][] = [
-      // M
-      [
-        [1,0,0,0,1],
-        [1,1,0,1,1],
-        [1,0,1,0,1],
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-      ],
-      // I
-      [
-        [1,1,1,1,1],
-        [0,0,1,0,0],
-        [0,0,1,0,0],
-        [0,0,1,0,0],
-        [0,0,1,0,0],
-        [0,0,1,0,0],
-        [1,1,1,1,1],
-      ],
-      // N
-      [
-        [1,0,0,0,1],
-        [1,1,0,0,1],
-        [1,0,1,0,1],
-        [1,0,0,1,1],
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-      ],
-      // R
-      [
-        [1,1,1,1,0],
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-        [1,1,1,1,0],
-        [1,0,1,0,0],
-        [1,0,0,1,0],
-        [1,0,0,0,1],
-      ],
+    // Bigger pixel font — 7x9 grids
+    const letters: { grid: number[][]; color: string; highlight: string; shadow: string }[] = [
+      { // M — stone gray
+        grid: [
+          [1,1,0,0,0,1,1],
+          [1,0,1,0,1,0,1],
+          [1,0,1,0,1,0,1],
+          [1,0,0,1,0,0,1],
+          [1,0,0,0,0,0,1],
+          [1,0,0,0,0,0,1],
+          [1,0,0,0,0,0,1],
+          [1,0,0,0,0,0,1],
+          [1,0,0,0,0,0,1],
+        ],
+        color: "#5a7a5a", highlight: "#7aaa7a", shadow: "#2a3a2a",
+      },
+      { // I — torch! Brown stick with flame on top
+        grid: [
+          [0,0,1,0,0,0,0], // flame tip
+          [0,1,1,1,0,0,0], // flame
+          [0,1,1,1,0,0,0], // flame
+          [0,0,1,0,0,0,0], // torch top
+          [0,0,1,0,0,0,0],
+          [0,0,1,0,0,0,0],
+          [0,0,1,0,0,0,0],
+          [0,0,1,0,0,0,0],
+          [0,0,1,0,0,0,0],
+        ],
+        color: "#6b4226", highlight: "#8b6246", shadow: "#3a2010",
+      },
+      { // N — emerald green
+        grid: [
+          [1,0,0,0,0,0,1],
+          [1,1,0,0,0,0,1],
+          [1,1,1,0,0,0,1],
+          [1,0,1,1,0,0,1],
+          [1,0,0,1,1,0,1],
+          [1,0,0,0,1,1,1],
+          [1,0,0,0,0,1,1],
+          [1,0,0,0,0,0,1],
+          [1,0,0,0,0,0,1],
+        ],
+        color: "#22aa44", highlight: "#44dd66", shadow: "#0a5520",
+      },
+      { // R — diamond blue
+        grid: [
+          [1,1,1,1,1,1,0],
+          [1,0,0,0,0,1,1],
+          [1,0,0,0,0,0,1],
+          [1,0,0,0,0,1,1],
+          [1,1,1,1,1,1,0],
+          [1,0,0,1,0,0,0],
+          [1,0,0,0,1,0,0],
+          [1,0,0,0,0,1,0],
+          [1,0,0,0,0,0,1],
+        ],
+        color: "#3366cc", highlight: "#5588ee", shadow: "#1a3366",
+      },
     ];
 
-    const pixelSize = 6;
-    const letterW = 5 * pixelSize;
-    const letterH = 7 * pixelSize;
-    const gap = 10;
+    const ps = 8; // pixel size
+    const cols = 7;
+    const rows = 9;
+    const letterW = cols * ps;
+    const gap = 14;
     const totalW = letters.length * letterW + (letters.length - 1) * gap;
-    const offsetX = Math.floor((256 - totalW) / 2);
-    const offsetY = Math.floor((64 - letterH) / 2);
+    const offX = Math.floor((480 - totalW) / 2);
+    const offY = Math.floor((120 - rows * ps) / 2);
 
     for (let li = 0; li < letters.length; li++) {
-      const grid = letters[li]!;
-      const lx = offsetX + li * (letterW + gap);
-      for (let row = 0; row < 7; row++) {
-        for (let col = 0; col < 5; col++) {
-          if (!grid[row]![col]) continue;
-          const px = lx + col * pixelSize;
-          const py = offsetY + row * pixelSize;
-          // Gradient: green (#22cc66) to blue (#2266ff) across all letters
-          const t = (li * 5 + col) / (letters.length * 5 - 1);
-          const r = Math.round(0x22 + (0x22 - 0x22) * t);
-          const g = Math.round(0xcc + (0x66 - 0xcc) * t);
-          const b = Math.round(0x66 + (0xff - 0x66) * t);
-          // Dark outline/shadow (offset +2, +2)
-          lctx.fillStyle = "rgba(0,0,0,0.6)";
-          lctx.fillRect(px + 2, py + 2, pixelSize, pixelSize);
-          // Main pixel
-          lctx.fillStyle = `rgb(${r},${g},${b})`;
-          lctx.fillRect(px, py, pixelSize, pixelSize);
-          // Highlight on top-left of each pixel for a 3D blocky look
-          lctx.fillStyle = "rgba(255,255,255,0.2)";
-          lctx.fillRect(px, py, pixelSize, 1);
-          lctx.fillRect(px, py, 1, pixelSize);
+      const L = letters[li]!;
+      const baseX = offX + li * (letterW + gap);
+
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          if (!L.grid[row]![col]) continue;
+          const px = baseX + col * ps;
+          const py = offY + row * ps;
+
+          // Special: torch flame for I (rows 0-2)
+          if (li === 1 && row <= 2) {
+            // Flame: orange/yellow gradient with flicker
+            const flameColors = ["#ff6600", "#ff8800", "#ffaa00", "#ffcc33", "#ffee66"];
+            const ci = (row * 2 + col) % flameColors.length;
+            // Glow behind flame
+            lctx.fillStyle = "rgba(255,100,0,0.3)";
+            lctx.fillRect(px - 3, py - 3, ps + 6, ps + 6);
+            // Shadow
+            lctx.fillStyle = "rgba(0,0,0,0.4)";
+            lctx.fillRect(px + 3, py + 3, ps, ps);
+            // Flame pixel
+            lctx.fillStyle = flameColors[ci]!;
+            lctx.fillRect(px, py, ps, ps);
+            // Bright center
+            lctx.fillStyle = "rgba(255,255,200,0.5)";
+            lctx.fillRect(px + 2, py + 1, ps - 4, ps - 3);
+            continue;
+          }
+
+          // Shadow
+          lctx.fillStyle = L.shadow;
+          lctx.fillRect(px + 3, py + 3, ps, ps);
+          // Main block pixel
+          lctx.fillStyle = L.color;
+          lctx.fillRect(px, py, ps, ps);
+          // Top highlight
+          lctx.fillStyle = L.highlight;
+          lctx.fillRect(px, py, ps, 2);
+          lctx.fillRect(px, py, 2, ps);
+          // Bottom edge dark
+          lctx.fillStyle = L.shadow;
+          lctx.fillRect(px, py + ps - 1, ps, 1);
+          lctx.fillRect(px + ps - 1, py, 1, ps);
+          // Inner noise for texture
+          for (let ny = 0; ny < ps; ny += 3) {
+            for (let nx = 0; nx < ps; nx += 3) {
+              if (Math.random() > 0.6) {
+                lctx.fillStyle = "rgba(0,0,0,0.1)";
+                lctx.fillRect(px + nx, py + ny, 2, 2);
+              }
+            }
+          }
         }
       }
     }
 
+    // Subtitle
+    lctx.fillStyle = "rgba(255,255,255,0.5)";
+    lctx.font = "bold 10px monospace";
+    lctx.textAlign = "center";
+    lctx.fillText("B L O C K  W O R L D", 240, 115);
+
     const logoDataURL = logoCanvas.toDataURL();
 
     overlay.innerHTML = `
-      <img src="${logoDataURL}" style="margin-bottom:20px;image-rendering:pixelated" width="256" height="64" alt="MINR">
+      <img src="${logoDataURL}" style="margin-bottom:16px;image-rendering:pixelated" width="480" height="120" alt="MINR">
       <div style="font-size:18px;margin-bottom:20px">Click to play</div>
       <div style="font-size:13px;opacity:0.8;line-height:2.2;text-align:left;max-width:420px">
         <b>MOVE:</b> WASD / Arrows &nbsp;&nbsp; <b>JUMP:</b> Space<br>
