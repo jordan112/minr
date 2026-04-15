@@ -215,25 +215,27 @@ document.addEventListener("keydown", (e) => {
     hud.setTool(currentTool);
   }
 
-  // C to cast fishing line (when holding rod)
+  // C to cast fishing line (when holding rod — requires water nearby)
   if (e.code === "KeyC" && currentTool === ToolType.FISHING_ROD && fishingGame.state === "idle") {
-    // Place fish at a spot in front of the player near water level
     const dir = controller.getLookDirection();
     const castX = player.position.x + dir.x * 5;
     const castZ = player.position.z + dir.z * 5;
-    // Find water surface nearby
+    let foundWater = false;
     let castY = player.position.y;
     for (let y = Math.floor(player.position.y) + 3; y >= Math.floor(player.position.y) - 5; y--) {
       if (world.getBlock(Math.floor(castX), y, Math.floor(castZ)) === BlockId.WATER) {
         castY = y + 0.5;
+        foundWater = true;
         break;
       }
     }
-    fishingGame.setCastPosition(new THREE.Vector3(castX, castY, castZ));
-    fishingGame.startFishing();
-    controller.playerModel.triggerSwing();
-        controller.triggerFPSwing();
-    sound.playSplash();
+    if (foundWater) {
+      fishingGame.setCastPosition(new THREE.Vector3(castX, castY, castZ));
+      fishingGame.startFishing();
+      controller.playerModel.triggerSwing();
+      controller.triggerFPSwing();
+      sound.playSplash();
+    }
   }
 
   // P to pause
@@ -360,7 +362,7 @@ function getSpawnPos(): [number, number, number] {
 function spawnAnimalAt(type: "sheep" | "pig" | "cow") {
   const [x, y, z] = getSpawnPos();
   const animal = new Animal(type, world, x, y, z);
-  sceneManager.scene.add(animal.group);
+  animals.addAnimal(animal); // register with manager so they can be attacked
 }
 
 function spawnZombieAt() {
@@ -760,11 +762,13 @@ function gameLoop(now: number) {
         const hitBlock = world.getBlock(bx, by, bz);
 
         if (hitBlock === BlockId.LEVER) {
-          // Toggle lever
-          toggleLever(world, bx, by, bz);
-          sound.playBlockPlace();
+          // Left-click breaks lever (use B/right-click to toggle)
+          spawnBreakParticles(bx, by, bz);
+          world.setBlock(bx, by, bz, BlockId.AIR);
+          propagatePower(world, bx, by, bz);
+          sound.playBlockBreak();
           controller.playerModel.triggerSwing();
-        controller.triggerFPSwing();
+          controller.triggerFPSwing();
         } else if (hitBlock === BlockId.TNT) {
           // TNT EXPLOSION! Destroy blocks in a radius
           sound.playExplosion();
@@ -782,8 +786,17 @@ function gameLoop(now: number) {
             }
           }
         } else {
+          const brokenBlock = world.getBlock(bx, by, bz);
           spawnBreakParticles(bx, by, bz);
           world.setBlock(bx, by, bz, BlockId.AIR);
+          // Re-propagate redstone if a circuit block was broken
+          if (brokenBlock === BlockId.WIRE || brokenBlock === BlockId.LAMP || brokenBlock === BlockId.DOOR) {
+            propagatePower(world, bx, by, bz);
+          }
+          // Check if blocks above should fall (gravity)
+          for (let gy = by + 1; gy < by + 10; gy++) {
+            checkGravityAt(world, bx, gy, bz);
+          }
         }
         controller.playerModel.triggerSwing();
         controller.triggerFPSwing();
@@ -834,8 +847,19 @@ function gameLoop(now: number) {
   ghostBlock.position.set(placeX + 0.5, placeY + 0.5, placeZ + 0.5);
   ghostBlock.visible = false;
 
-  // Place block: B/E key or right-click
+  // Toggle lever with B/right-click (if aiming at a lever)
   const wantsPlace = input.rightClick || input.placeClick;
+  if (wantsPlace && raycaster.lastHit) {
+    const [lbx, lby, lbz] = raycaster.lastHit.blockPos;
+    if (world.getBlock(lbx, lby, lbz) === BlockId.LEVER) {
+      toggleLever(world, lbx, lby, lbz);
+      sound.playBlockPlace();
+      controller.playerModel.triggerSwing();
+      controller.triggerFPSwing();
+    }
+  }
+
+  // Place block: B/E key or right-click
   if (wantsPlace && hasPlaceTarget) {
     const px = player.position.x;
     const py = player.position.y;

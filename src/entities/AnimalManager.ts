@@ -56,6 +56,11 @@ export class AnimalManager {
     return this.animals;
   }
 
+  addAnimal(animal: Animal): void {
+    this.animals.push(animal);
+    this.scene.add(animal.group);
+  }
+
   /** Find the nearest animal within range of a point */
   findNearestInRange(x: number, y: number, z: number, range: number): Animal | null {
     let nearest: Animal | null = null;
