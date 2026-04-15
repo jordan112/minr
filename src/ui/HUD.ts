@@ -458,6 +458,12 @@ export class HUD {
         <b>SAVE:</b> Ctrl+S (autosaves every 30s) &nbsp; <b>LOAD:</b> L<br>
         <b>RESET:</b> R &nbsp; <b>MUSIC:</b> M &nbsp; <b>DEBUG:</b> F3
       </div>
+      <div style="font-size:12px;opacity:0.6;margin-top:12px;text-align:center;max-width:420px;line-height:1.8">
+        <b style="color:#ff4444">REDSTONE CIRCUITS:</b><br>
+        Place <b>Lever</b> → connect with <b>Wire</b> → end with <b>Lamp</b> or <b>Door</b><br>
+        Left-click Lever to toggle power. Wire carries signal up to 15 blocks.<br>
+        Powered Lamps glow. Powered Doors open (walk through).
+      </div>
     `;
     document.body.appendChild(overlay);
 

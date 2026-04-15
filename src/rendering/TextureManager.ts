@@ -187,18 +187,130 @@ export class TextureManager {
 
     // Torch — draw stick with flame
     if (blockId === BlockId.TORCH) {
-      ctx.fillStyle = "#4a8c2a"; // green bg to blend with grass when used as flower
+      ctx.fillStyle = "#4a8c2a";
       ctx.fillRect(x, y, size, size);
-      // Brown stick
       ctx.fillStyle = "#6b4226";
       ctx.fillRect(x + 7, y + 6, 2, 10);
-      // Flame
       ctx.fillStyle = "#ff8800";
       ctx.fillRect(x + 6, y + 3, 4, 4);
       ctx.fillStyle = "#ffcc00";
       ctx.fillRect(x + 7, y + 2, 2, 3);
       ctx.fillStyle = "#ffee66";
       ctx.fillRect(x + 7, y + 3, 2, 1);
+    }
+
+    // WIRE — dark stone with red circuit line pattern
+    if (blockId === BlockId.WIRE) {
+      ctx.fillStyle = "#444444";
+      ctx.fillRect(x, y, size, size);
+      // Stone noise
+      for (let py2 = 0; py2 < size; py2++) {
+        for (let px2 = 0; px2 < size; px2++) {
+          if (Math.random() > 0.7) { ctx.fillStyle = "rgba(0,0,0,0.15)"; ctx.fillRect(x+px2, y+py2, 1, 1); }
+        }
+      }
+      // Red cross wire pattern
+      ctx.fillStyle = "#cc0000";
+      ctx.fillRect(x + 0, y + 7, 16, 2); // horizontal line
+      ctx.fillRect(x + 7, y + 0, 2, 16); // vertical line
+      // Bright red center node
+      ctx.fillStyle = "#ff2222";
+      ctx.fillRect(x + 6, y + 6, 4, 4);
+      // Dark red dots at ends
+      ctx.fillStyle = "#880000";
+      ctx.fillRect(x + 0, y + 6, 2, 4);
+      ctx.fillRect(x + 14, y + 6, 2, 4);
+      ctx.fillRect(x + 6, y + 0, 4, 2);
+      ctx.fillRect(x + 6, y + 14, 4, 2);
+    }
+
+    // LEVER — cobblestone base with wooden toggle handle
+    if (blockId === BlockId.LEVER) {
+      ctx.fillStyle = "#666666";
+      ctx.fillRect(x, y, size, size);
+      for (let py2 = 0; py2 < size; py2++) {
+        for (let px2 = 0; px2 < size; px2++) {
+          if (Math.random() > 0.6) { ctx.fillStyle = `rgba(${Math.random()>0.5?'80':'40'},${Math.random()>0.5?'80':'40'},${Math.random()>0.5?'80':'40'},0.3)`; ctx.fillRect(x+px2, y+py2, 1, 1); }
+        }
+      }
+      // Base plate
+      ctx.fillStyle = "#555555";
+      ctx.fillRect(x + 3, y + 10, 10, 5);
+      ctx.fillStyle = "#777777";
+      ctx.fillRect(x + 3, y + 10, 10, 1);
+      // Toggle handle (wooden stick)
+      ctx.fillStyle = "#8b6914";
+      ctx.fillRect(x + 7, y + 2, 2, 9);
+      // Handle knob
+      ctx.fillStyle = "#aa8833";
+      ctx.fillRect(x + 6, y + 1, 4, 3);
+    }
+
+    // LAMP — glassy block with glowstone-like pattern
+    if (blockId === BlockId.LAMP) {
+      ctx.fillStyle = "#bbaa77";
+      ctx.fillRect(x, y, size, size);
+      // Glowstone crystal pattern
+      const lampColors = ["#ddcc88", "#ccbb66", "#eedd99", "#bbaa55"];
+      for (let py2 = 0; py2 < size; py2 += 4) {
+        for (let px2 = 0; px2 < size; px2 += 4) {
+          ctx.fillStyle = lampColors[Math.floor(Math.random() * lampColors.length)]!;
+          ctx.fillRect(x + px2, y + py2, 4, 4);
+          // Inner glow
+          ctx.fillStyle = "rgba(255,255,200,0.3)";
+          ctx.fillRect(x + px2 + 1, y + py2 + 1, 2, 2);
+        }
+      }
+      // Border
+      ctx.fillStyle = "#887744";
+      ctx.fillRect(x, y, size, 1);
+      ctx.fillRect(x, y + size - 1, size, 1);
+      ctx.fillRect(x, y, 1, size);
+      ctx.fillRect(x + size - 1, y, 1, size);
+    }
+
+    // DOOR — wooden plank door with handle
+    if (blockId === BlockId.DOOR) {
+      ctx.fillStyle = "#7a5a30";
+      ctx.fillRect(x, y, size, size);
+      // Wood grain
+      for (let px2 = 0; px2 < size; px2 += 3) {
+        ctx.fillStyle = "rgba(0,0,0,0.1)";
+        ctx.fillRect(x + px2, y, 1, size);
+      }
+      // Horizontal planks
+      ctx.fillStyle = "#6a4a20";
+      ctx.fillRect(x, y + 5, size, 1);
+      ctx.fillRect(x, y + 10, size, 1);
+      // Door frame
+      ctx.fillStyle = "#5a3a15";
+      ctx.fillRect(x, y, size, 1);
+      ctx.fillRect(x, y + size - 1, size, 1);
+      ctx.fillRect(x, y, 1, size);
+      ctx.fillRect(x + size - 1, y, 1, size);
+      // Handle (iron knob)
+      ctx.fillStyle = "#999999";
+      ctx.fillRect(x + 11, y + 7, 3, 2);
+      ctx.fillStyle = "#bbbbbb";
+      ctx.fillRect(x + 12, y + 7, 1, 1);
+    }
+
+    // GLASS — transparent with cross pattern
+    if (blockId === BlockId.GLASS) {
+      ctx.fillStyle = "rgba(180,220,255,0.4)";
+      ctx.fillRect(x, y, size, size);
+      // Glass pane frame
+      ctx.fillStyle = "rgba(150,200,240,0.6)";
+      ctx.fillRect(x, y, size, 1);
+      ctx.fillRect(x, y + size - 1, size, 1);
+      ctx.fillRect(x, y, 1, size);
+      ctx.fillRect(x + size - 1, y, 1, size);
+      // Cross divider
+      ctx.fillRect(x + 7, y, 2, size);
+      ctx.fillRect(x, y + 7, size, 2);
+      // Shine
+      ctx.fillStyle = "rgba(255,255,255,0.3)";
+      ctx.fillRect(x + 2, y + 2, 4, 4);
     }
   }
 

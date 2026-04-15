@@ -5,7 +5,8 @@ export class InputManager {
   private _leftClick = false;
   private _rightClick = false;
   private _leftHeld = false;
-  private _placeClick = false; // B key one-shot
+  private _placeClick = false;
+  private _scrollDelta = 0;
   isPointerLocked = false;
   private canvas: HTMLCanvasElement;
 
@@ -46,6 +47,12 @@ export class InputManager {
 
     canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
+    // Scroll wheel for block selection
+    canvas.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      this._scrollDelta += e.deltaY > 0 ? 1 : -1;
+    });
+
     document.addEventListener("pointerlockchange", () => {
       this.isPointerLocked = document.pointerLockElement === canvas;
     });
@@ -61,6 +68,7 @@ export class InputManager {
   get leftHeld(): boolean { return this._leftHeld; }
   get rightClick(): boolean { return this._rightClick; }
   get placeClick(): boolean { return this._placeClick; }
+  get scrollDelta(): number { return this._scrollDelta; }
 
   resetFrame(): void {
     this._mouseDX = 0;
@@ -68,5 +76,6 @@ export class InputManager {
     this._leftClick = false;
     this._rightClick = false;
     this._placeClick = false;
+    this._scrollDelta = 0;
   }
 }

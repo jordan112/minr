@@ -191,8 +191,12 @@ document.addEventListener("keydown", (e) => {
   }
 
   // Number keys for block selection
-  if (num >= 1 && num <= PLACEABLE_BLOCKS.length) {
+  // 1-9 select blocks, 0 selects block 10
+  if (num >= 1 && num <= 9 && num <= PLACEABLE_BLOCKS.length) {
     player.selectedBlockIndex = num - 1;
+  }
+  if (e.key === "0" && PLACEABLE_BLOCKS.length >= 10) {
+    player.selectedBlockIndex = 9;
   }
 
   if (e.code === "KeyV") {
@@ -1047,6 +1051,12 @@ function gameLoop(now: number) {
 
   // Autosave every 30s
   saveManager.updateAutosave(dt, player, world, dayTime);
+
+  // Scroll wheel block selection
+  if (input.scrollDelta !== 0) {
+    const len = PLACEABLE_BLOCKS.length;
+    player.selectedBlockIndex = ((player.selectedBlockIndex + input.scrollDelta) % len + len) % len;
+  }
 
   hud.fishCaughtCount = fishingGame.totalCaught;
   hud.debugInfo.animals = animals.getAnimals().length;
