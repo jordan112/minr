@@ -81,7 +81,7 @@ def(BlockId.TNT, "TNT", { top: "#cc3333", bottom: "#cc3333", side: "#dd4444" }, 
 def(BlockId.WIRE, "Wire", { top: "#880000", bottom: "#880000", side: "#880000" }, { isTransparent: true }, 2, 3);
 def(BlockId.LEVER, "Lever", { top: "#886644", bottom: "#666666", side: "#886644" }, {}, 2, 6);
 def(BlockId.LAMP, "Lamp", { top: "#ddddaa", bottom: "#ddddaa", side: "#ddddaa" }, { emitsLight: true }, 2, 9);
-def(BlockId.DOOR, "Door", { top: "#6b4226", bottom: "#6b4226", side: "#5a3a20" }, { isTransparent: true }, 2, 12);
+def(BlockId.DOOR, "Door", { top: "#6b4226", bottom: "#6b4226", side: "#5a3a20" }, {}, 2, 12);
 // Physics blocks
 def(BlockId.GRAVEL, "Gravel", { top: "#888877", bottom: "#888877", side: "#888877" }, { gravity: true }, 3, 0);
 def(BlockId.FIRE, "Fire", { top: "#ff6600", bottom: "#ff4400", side: "#ff5500" }, { isSolid: false, isTransparent: true, emitsLight: true }, 3, 3);
