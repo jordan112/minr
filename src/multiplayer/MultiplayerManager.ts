@@ -79,9 +79,11 @@ export class MultiplayerManager {
   showMenu(): void {
     if (this.overlay.style.display !== "none") {
       this.overlay.style.display = "none";
+      document.querySelector("canvas")?.requestPointerLock();
       return;
     }
 
+    document.exitPointerLock();
     this.overlay.style.display = "block";
     this.overlay.innerHTML = `
       <div style="font-size:18px;font-weight:bold;margin-bottom:16px">MULTIPLAYER</div>

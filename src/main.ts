@@ -160,18 +160,37 @@ hud.onBlockSelect = (index) => {
 hud.onModeSelect = (mode) => {
   gameMode = createGameState(mode as GameModeType);
   if (mode === "bedwars") {
-    // Set bed position near player spawn
+    // Place bed RIGHT at the player's feet so they see it immediately
     const bedX = Math.floor(player.position.x);
-    const bedZ = Math.floor(player.position.z) + 3;
-    let bedY = 0;
-    for (let y = 80; y >= 1; y--) {
+    const bedZ = Math.floor(player.position.z);
+    let bedY = Math.floor(player.position.y);
+    // Make sure we place on solid ground
+    for (let y = bedY; y >= 1; y--) {
       if (isSolid(world.getBlock(bedX, y, bedZ))) { bedY = y + 1; break; }
     }
     gameMode.bedPos = [bedX, bedY, bedZ];
-    // Place a red bed block (use TNT visually for now — it's red)
-    world.setBlock(bedX, bedY, bedZ, BlockId.TNT);
+    // Place the bed block and mark it with a glowing beacon
+    world.setBlock(bedX, bedY, bedZ, BlockId.LAMP); // glowing block = the bed
+    // Build small walls around it for initial defense
+    for (const [dx, dz] of [[1,0],[-1,0],[0,1],[0,-1]] as [number,number][]) {
+      world.setBlock(bedX + dx, bedY, bedZ + dz, BlockId.WOOD);
+      world.setBlock(bedX + dx, bedY + 1, bedZ + dz, BlockId.WOOD);
+    }
     player.isCreative = false;
-    dayTime = 0.7; // start near dusk for immediate action
+    dayTime = 0.65; // near dusk
+
+    // Show instructions
+    loot.show("BEDWARS! Defend the glowing bed!", "#ff4444");
+    setTimeout(() => loot.show("Build walls! Zombies come in waves!", "#ffaa44"), 3000);
+    setTimeout(() => loot.show("Bed destroyed = GAME OVER", "#ff4444"), 6000);
+
+    // Add bed marker (3D glowing pillar above bed)
+    const beaconGeo = new THREE.BoxGeometry(0.3, 8, 0.3);
+    const beaconMat = new THREE.MeshBasicMaterial({ color: 0xff4444, transparent: true, opacity: 0.4 });
+    const beacon = new THREE.Mesh(beaconGeo, beaconMat);
+    beacon.position.set(bedX + 0.5, bedY + 5, bedZ + 0.5);
+    beacon.userData.isBedBeacon = true;
+    sceneManager.scene.add(beacon);
   }
 };
 hud.onPlay = () => {
@@ -214,13 +233,25 @@ document.addEventListener("keydown", (e) => {
     hud.setTool(currentTool);
   }
 
-  // Number keys for block selection
-  // 1-9 select blocks, 0 selects block 10
-  if (num >= 1 && num <= 9 && num <= PLACEABLE_BLOCKS.length) {
-    player.selectedBlockIndex = num - 1;
-  }
-  if (e.key === "0" && PLACEABLE_BLOCKS.length >= 10) {
-    player.selectedBlockIndex = 9;
+  // Number keys — buffered for multi-digit (type "12" fast = block 12)
+  if (num >= 0 && num <= 9) {
+    const now = performance.now();
+    if (now - blockSelectTime < 400 && blockSelectBuffer !== "") {
+      // Second digit within 400ms — combine
+      const combined = parseInt(blockSelectBuffer + e.key) - 1;
+      if (combined >= 0 && combined < PLACEABLE_BLOCKS.length) {
+        player.selectedBlockIndex = combined;
+      }
+      blockSelectBuffer = "";
+    } else {
+      // First digit — buffer it, apply after timeout
+      blockSelectBuffer = e.key;
+      blockSelectTime = now;
+      const idx = num - 1;
+      if (idx >= 0 && idx < PLACEABLE_BLOCKS.length) {
+        player.selectedBlockIndex = idx;
+      }
+    }
   }
 
   if (e.code === "KeyV") {
@@ -328,8 +359,27 @@ document.addEventListener("keydown", (e) => {
     }
   }
 
-  // R to reset position
+  // R to reset position / restart bedwars
   if (e.code === "KeyR") {
+    if (gameMode.type === "bedwars" && gameMode.gameOver) {
+      // Full bedwars restart
+      gameMode = createGameState("bedwars");
+      // Clear all zombies
+      for (const z of zombies) sceneManager.scene.remove(z.group);
+      zombies.length = 0;
+      // Reset bed
+      const bedX = Math.floor(player.position.x);
+      const bedZ = Math.floor(player.position.z);
+      let bedY = 0;
+      for (let y = 80; y >= 1; y--) {
+        if (isSolid(world.getBlock(bedX, y, bedZ))) { bedY = y + 1; break; }
+      }
+      gameMode.bedPos = [bedX, bedY, bedZ];
+      world.setBlock(bedX, bedY, bedZ, BlockId.LAMP);
+      player.health = player.maxHealth;
+      dayTime = 0.65;
+      loot.show("BEDWARS RESTARTED!", "#44ff44");
+    }
     player.position.set(0, 80, 0);
     player.velocity.set(0, 0, 0);
   }
@@ -338,7 +388,8 @@ document.addEventListener("keydown", (e) => {
 // Spawn menu
 function showSpawnMenu() {
   const existing = document.getElementById("spawn-menu");
-  if (existing) { existing.remove(); return; }
+  if (existing) { existing.remove(); canvas.requestPointerLock(); return; }
+  document.exitPointerLock();
 
   const menu = document.createElement("div");
   menu.id = "spawn-menu";
@@ -380,7 +431,7 @@ function showSpawnMenu() {
       padding: "8px", background: "#444", color: "white", border: "1px solid #666",
       borderRadius: "4px", cursor: "pointer", fontFamily: "monospace", fontSize: "13px",
     });
-    btn.addEventListener("click", () => { s.fn(); menu.remove(); });
+    btn.addEventListener("click", () => { s.fn(); menu.remove(); canvas.requestPointerLock(); });
     btn.addEventListener("mouseenter", () => { btn.style.background = "#666"; });
     btn.addEventListener("mouseleave", () => { btn.style.background = "#444"; });
     menu.appendChild(btn);
@@ -431,6 +482,8 @@ function spawnVillagerAt() {
 // --- Game Loop ---
 let lastTime = performance.now();
 let placeCooldown = 0;
+let blockSelectBuffer = "";
+let blockSelectTime = 0;
 
 // Block damage tracking — multi-hit breaking
 let breakingBlock: { x: number; y: number; z: number; hits: number } | null = null;
@@ -1222,6 +1275,7 @@ function gameLoop(now: number) {
       }
     }
 
+    bedwarsHUD.playerPos = { x: player.position.x, z: player.position.z };
     bedwarsHUD.update(gameMode);
   }
 

@@ -86,19 +86,32 @@ export class BedwarsHUD {
   show(): void { this.container.style.display = "block"; }
   hide(): void { this.container.style.display = "none"; }
 
+  playerPos = { x: 0, z: 0 };
+
   update(state: GameModeState): void {
     if (state.type !== "bedwars") { this.hide(); return; }
     this.show();
 
     if (state.betweenWaves) {
-      this.waveText.textContent = `\u2694\ufe0f WAVE ${state.wave + 1} in ${Math.ceil(state.waveTimer)}s`;
+      this.waveText.textContent = `\u2694\ufe0f WAVE ${state.wave + 1} in ${Math.ceil(state.waveTimer)}s — BUILD DEFENSES!`;
+      this.waveText.style.color = "#44ff44";
     } else {
-      this.waveText.textContent = `\u2694\ufe0f WAVE ${state.wave} — ${state.enemiesRemaining} enemies`;
+      this.waveText.textContent = `\u2694\ufe0f WAVE ${state.wave} — ${state.enemiesRemaining} zombies remaining!`;
+      this.waveText.style.color = "#ff4444";
+    }
+
+    // Distance to bed
+    let bedInfo = "";
+    if (state.bedPos) {
+      const dx = state.bedPos[0] - this.playerPos.x;
+      const dz = state.bedPos[2] - this.playerPos.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      if (dist > 5) bedInfo = ` (${Math.round(dist)}m away)`;
     }
 
     const bedPct = (state.bedHealth / state.maxBedHealth) * 100;
     this.bedHealthFill.style.width = bedPct + "%";
-    this.infoText.textContent = `\ud83d\udecf\ufe0f Bed: ${state.bedHealth}/${state.maxBedHealth}  Score: ${state.score}`;
+    this.infoText.textContent = `\ud83d\udecf\ufe0f Bed: ${state.bedHealth}/${state.maxBedHealth}${bedInfo}  Score: ${state.score}`;
 
     if (state.gameOver) {
       this.gameOverOverlay.style.display = "flex";
