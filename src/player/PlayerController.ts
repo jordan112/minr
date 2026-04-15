@@ -207,14 +207,21 @@ export class PlayerController {
     const desiredVX = worldMoveX * speed;
     const desiredVZ = worldMoveZ * speed;
 
-    // Gravity
-    p.velocity.y -= GRAVITY * dt;
+    if (p.isCreative) {
+      // Creative mode: fly with space (up) and shift (down)
+      p.velocity.y = 0;
+      if (this.input.isKeyDown("Space")) p.velocity.y = 8;
+      if (this.input.isKeyDown("ShiftLeft")) p.velocity.y = -8;
+    } else {
+      // Gravity
+      p.velocity.y -= GRAVITY * dt;
 
-    // Jump
-    if (this.input.isKeyDown("Space") && p.isGrounded) {
-      p.velocity.y = JUMP_VELOCITY;
-      p.isGrounded = false;
-      this.justJumped = true;
+      // Jump
+      if (this.input.isKeyDown("Space") && p.isGrounded) {
+        p.velocity.y = JUMP_VELOCITY;
+        p.isGrounded = false;
+        this.justJumped = true;
+      }
     }
 
     // Move with collision on each axis independently

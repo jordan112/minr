@@ -12,6 +12,7 @@ export class Player {
   hurtCooldown = 0;
   xp = 0;
   level = 1;
+  isCreative = false;
 
   addXP(amount: number): boolean {
     this.xp += amount;
@@ -27,6 +28,7 @@ export class Player {
   }
 
   takeDamage(amount: number): void {
+    if (this.isCreative) return; // no damage in creative
     if (this.hurtCooldown > 0) return;
     this.health = Math.max(0, this.health - amount);
     this.hurtCooldown = 0.5; // invincibility frames

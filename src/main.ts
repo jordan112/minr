@@ -24,6 +24,9 @@ import { MountainGoat } from "./entities/MountainGoat";
 import { LootPopup, rollLoot } from "./ui/LootPopup";
 import { Boat } from "./entities/Boat";
 import { SaveManager } from "./save/SaveManager";
+import { createGameState } from "./modes/GameMode";
+import type { GameModeType } from "./modes/GameMode";
+import { BedwarsHUD } from "./modes/BedwarsHUD";
 import { toggleLever, propagatePower, isPowered, getPoweredLamps, consumePendingTNT } from "./world/RedstoneSystem";
 import { updatePhysics, checkGravityAt, registerFire, spreadWater } from "./world/PhysicsSystem";
 import { hasGravity, getHardness } from "./world/BlockType";
@@ -64,6 +67,8 @@ ghostBlock.visible = false;
 ghostBlock.renderOrder = 2;
 sceneManager.scene.add(ghostBlock);
 const saveManager = new SaveManager();
+const bedwarsHUD = new BedwarsHUD();
+let gameMode = createGameState("freeplay");
 
 // Break particle effect
 const breakParticles: {mesh: THREE.Mesh, vel: THREE.Vector3, life: number}[] = [];
@@ -149,6 +154,23 @@ fishingGame.onCatch = (fishName) => {
 // Block selection
 hud.onBlockSelect = (index) => {
   player.selectedBlockIndex = index;
+};
+hud.onModeSelect = (mode) => {
+  gameMode = createGameState(mode as GameModeType);
+  if (mode === "bedwars") {
+    // Set bed position near player spawn
+    const bedX = Math.floor(player.position.x);
+    const bedZ = Math.floor(player.position.z) + 3;
+    let bedY = 0;
+    for (let y = 80; y >= 1; y--) {
+      if (isSolid(world.getBlock(bedX, y, bedZ))) { bedY = y + 1; break; }
+    }
+    gameMode.bedPos = [bedX, bedY, bedZ];
+    // Place a red bed block (use TNT visually for now — it's red)
+    world.setBlock(bedX, bedY, bedZ, BlockId.TNT);
+    player.isCreative = false;
+    dayTime = 0.7; // start near dusk for immediate action
+  }
 };
 hud.onPlay = () => {
   sound.init();
@@ -241,6 +263,19 @@ document.addEventListener("keydown", (e) => {
   // P to pause
   if (e.code === "KeyP") {
     isPaused = !isPaused;
+  }
+
+  // J to toggle creative/survival mode
+  if (e.code === "KeyJ") {
+    player.isCreative = !player.isCreative;
+    if (player.isCreative) {
+      player.health = player.maxHealth;
+    }
+  }
+
+  // Creative mode: double-tap space to fly up, shift to fly down
+  if (e.code === "ShiftLeft" && player.isCreative) {
+    player.position.y -= 0.5;
   }
 
   // G to open spawn menu
@@ -496,9 +531,9 @@ function gameLoop(now: number) {
     }
   }
 
-  // Zombie spawning — ONLY at night
+  // Zombie spawning — ONLY at night, not in creative
   zombieSpawnTimer -= dt;
-  if (zombieSpawnTimer <= 0 && isNight && zombies.length < 10) {
+  if (zombieSpawnTimer <= 0 && isNight && !player.isCreative && zombies.length < 10) {
     zombieSpawnTimer = 3 + Math.random() * 3;
     const angle = Math.random() * Math.PI * 2;
     const dist = 25 + Math.random() * 15;
@@ -790,7 +825,7 @@ function gameLoop(now: number) {
           }
         } else {
           const brokenBlock = world.getBlock(bx, by, bz);
-          const hardness = getHardness(brokenBlock);
+          const hardness = player.isCreative ? 1 : getHardness(brokenBlock); // instant in creative
           const toolDef2 = getToolDef(currentTool);
 
           // Track multi-hit breaking
@@ -1111,6 +1146,77 @@ function gameLoop(now: number) {
 
   // Physics tick (gravity, fire, water flow)
   updatePhysics(world, dt);
+
+  // Bedwars mode logic
+  if (gameMode.type === "bedwars" && !gameMode.gameOver) {
+    // Check bed health
+    if (gameMode.bedPos) {
+      const [bpx, bpy, bpz] = gameMode.bedPos;
+      const bedBlock = world.getBlock(bpx, bpy, bpz);
+      if (bedBlock === BlockId.AIR) {
+        gameMode.bedHealth = 0;
+        gameMode.gameOver = true;
+      }
+    }
+
+    // Wave management
+    if (gameMode.betweenWaves) {
+      gameMode.waveTimer -= dt;
+      if (gameMode.waveTimer <= 0) {
+        // Start new wave
+        gameMode.wave++;
+        gameMode.betweenWaves = false;
+        const enemyCount = 3 + gameMode.wave * 2;
+        gameMode.enemiesRemaining = enemyCount;
+        // Spawn wave enemies
+        for (let i = 0; i < enemyCount; i++) {
+          const angle = (i / enemyCount) * Math.PI * 2;
+          const dist = 20 + Math.random() * 10;
+          const ex = player.position.x + Math.cos(angle) * dist;
+          const ez = player.position.z + Math.sin(angle) * dist;
+          let ey = 0;
+          for (let y = 80; y >= 1; y--) {
+            if (isSolid(world.getBlock(Math.floor(ex), y, Math.floor(ez)))) { ey = y + 1; break; }
+          }
+          if (ey > 0) {
+            const zombie = new Zombie(world, ex, ey, ez);
+            zombies.push(zombie);
+            sceneManager.scene.add(zombie.group);
+          }
+        }
+      }
+    } else {
+      // Count remaining enemies
+      gameMode.enemiesRemaining = zombies.filter(z => !z.isDead).length;
+      if (gameMode.enemiesRemaining <= 0) {
+        // Wave complete!
+        gameMode.betweenWaves = true;
+        gameMode.waveTimer = 15; // 15 seconds between waves
+        gameMode.score += gameMode.wave * 100;
+        loot.show(`Wave ${gameMode.wave} complete! +${gameMode.wave * 100} points`, "#44ff44");
+        // Heal player between waves
+        player.health = Math.min(player.maxHealth, player.health + 5);
+      }
+    }
+
+    // Zombies target the bed too
+    if (gameMode.bedPos) {
+      for (const z of zombies) {
+        if (z.isDead) continue;
+        const [bpx, bpy, bpz] = gameMode.bedPos;
+        const dx = z.position.x - bpx;
+        const dz = z.position.z - bpz;
+        const distToBed = Math.sqrt(dx * dx + dz * dz);
+        if (distToBed < 1.5) {
+          // Zombie attacks the bed!
+          gameMode.bedHealth = Math.max(0, gameMode.bedHealth - 1);
+          z.attackCooldown = 2;
+        }
+      }
+    }
+
+    bedwarsHUD.update(gameMode);
+  }
 
   // Autosave every 30s
   saveManager.updateAutosave(dt, player, world, dayTime);

@@ -444,7 +444,11 @@ export class HUD {
 
     overlay.innerHTML = `
       <img src="${logoDataURL}" style="margin-bottom:16px;image-rendering:pixelated" width="480" height="120" alt="MINR">
-      <div style="font-size:18px;margin-bottom:20px">Click to play</div>
+      <div style="font-size:18px;margin-bottom:12px">Select mode:</div>
+      <div style="display:flex;gap:12px;margin-bottom:20px">
+        <button id="mode-freeplay" style="padding:10px 20px;font-size:14px;font-family:monospace;background:#336633;color:white;border:2px solid #44aa44;border-radius:6px;cursor:pointer">\ud83c\udf0d Freeplay</button>
+        <button id="mode-bedwars" style="padding:10px 20px;font-size:14px;font-family:monospace;background:#663333;color:white;border:2px solid #aa4444;border-radius:6px;cursor:pointer">\u2694\ufe0f Bedwars</button>
+      </div>
       <div style="font-size:13px;opacity:0.8;line-height:2.2;text-align:left;max-width:420px">
         <b>MOVE:</b> WASD / Arrows &nbsp;&nbsp; <b>JUMP:</b> Space<br>
         <b>CAMERA:</b> V to toggle 1st/3rd person<br>
@@ -456,6 +460,7 @@ export class HUD {
         <b style="color:#ffaa33">SPAWN:</b> G to spawn creatures<br>
         <b>HEAL:</b> Stay safe 3s to auto-regen &nbsp; <b>PAUSE:</b> P<br>
         <b>SAVE:</b> Ctrl+S (autosaves every 30s) &nbsp; <b>LOAD:</b> L<br>
+        <b style="color:#aaffff">MODE:</b> J to toggle Creative/Survival (fly, no damage, instant break)<br>
         <b>RESET:</b> R &nbsp; <b>MUSIC:</b> M &nbsp; <b>DEBUG:</b> F3
       </div>
       <div style="font-size:12px;opacity:0.6;margin-top:12px;text-align:center;max-width:420px;line-height:1.8">
@@ -466,6 +471,22 @@ export class HUD {
       </div>
     `;
     document.body.appendChild(overlay);
+
+    // Mode button handlers
+    setTimeout(() => {
+      document.getElementById("mode-freeplay")?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        overlay.style.display = "none";
+        this.onModeSelect?.("freeplay");
+        this.onPlay?.();
+      });
+      document.getElementById("mode-bedwars")?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        overlay.style.display = "none";
+        this.onModeSelect?.("bedwars");
+        this.onPlay?.();
+      });
+    }, 0);
 
     overlay.addEventListener("click", () => {
       overlay.style.display = "none";
@@ -482,6 +503,7 @@ export class HUD {
   onBlockSelect?: (index: number) => void;
   onToolSelect?: (tool: ToolType) => void;
   onPlay?: () => void;
+  onModeSelect?: (mode: string) => void;
 
   setTool(tool: ToolType): void {
     this.currentTool = tool;
@@ -501,10 +523,15 @@ export class HUD {
     const totalHearts = Math.ceil(player.maxHealth / 2);
     const fullHearts = Math.floor(player.health / 2);
     const emptyHearts = totalHearts - fullHearts;
-    this.heartsDisplay.textContent = "\u2764\ufe0f".repeat(fullHearts) + "\ud83d\udda4".repeat(emptyHearts);
+    if (player.isCreative) {
+      this.heartsDisplay.textContent = "\u2728 CREATIVE MODE \u2728";
+    } else {
+      this.heartsDisplay.textContent = "\u2764\ufe0f".repeat(fullHearts) + "\ud83d\udda4".repeat(emptyHearts);
+    }
 
     const fishCount = this.fishCaughtCount;
-    this.statsText.textContent = `Lv.${player.level}  XP:${player.xp}/${player.level * 20}` + (fishCount > 0 ? `  \ud83d\udc1f${fishCount}` : "");
+    const modeStr = player.isCreative ? "CREATIVE" : "SURVIVAL";
+    this.statsText.textContent = `[${modeStr}]  Lv.${player.level}  XP:${player.xp}/${player.level * 20}` + (fishCount > 0 ? `  \ud83d\udc1f${fishCount}` : "");
 
     // Air bubbles (show only when underwater, i.e. airBubbles < 10)
     if (this.airBubbles < 10) {

@@ -17,7 +17,7 @@ const SPEECH_BUBBLES = [
   "Try TNT... boom!",
 ];
 
-const VILLAGER_NAMES = ["Sawyer", "Ryan", "Weston", "Santi", "Dylan", "Max", "Leo", "Finn", "Kai", "Milo"];
+const VILLAGER_NAMES = ["Sawyer", "Ryan", "Weston", "Santi", "Dylan", "Max", "Leo", "Finn", "Kai", "Milo", "Missy", "Shane", "Zoe", "Ruby", "Luna", "Lucy", "Jim", "Laurie", "Brady", "Avery"];
 
 export class Villager {
   group: THREE.Group;
