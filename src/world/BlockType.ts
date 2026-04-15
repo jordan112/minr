@@ -37,7 +37,8 @@ export interface BlockDef {
   };
   color: { top: string; bottom: string; side: string };
   emitsLight?: boolean;
-  gravity?: boolean; // falls like sand/gravel
+  gravity?: boolean;
+  hardness?: number; // hits to break (default 1)
 }
 
 const BLOCK_DEFS: Map<BlockId, BlockDef> = new Map();
@@ -46,7 +47,7 @@ function def(
   id: BlockId,
   name: string,
   color: { top: string; bottom: string; side: string },
-  opts?: { isSolid?: boolean; isTransparent?: boolean; emitsLight?: boolean; gravity?: boolean },
+  opts?: { isSolid?: boolean; isTransparent?: boolean; emitsLight?: boolean; gravity?: boolean; hardness?: number },
   texRow = 0,
   texCol = 0
 ) {
@@ -62,18 +63,19 @@ function def(
     color,
     emitsLight: opts?.emitsLight,
     gravity: opts?.gravity,
+    hardness: opts?.hardness,
   });
 }
 
 // Define all block types with their colors for the procedural atlas
-def(BlockId.GRASS, "Grass", { top: "#4a8c2a", bottom: "#6b4226", side: "#6b8c3a" }, {}, 0, 0);
-def(BlockId.DIRT, "Dirt", { top: "#6b4226", bottom: "#6b4226", side: "#6b4226" }, {}, 0, 3);
-def(BlockId.STONE, "Stone", { top: "#7a7a7a", bottom: "#7a7a7a", side: "#7a7a7a" }, {}, 0, 6);
-def(BlockId.WOOD, "Wood", { top: "#8b7242", bottom: "#8b7242", side: "#5c4020" }, {}, 0, 9);
-def(BlockId.LEAVES, "Leaves", { top: "#2d6b1e", bottom: "#2d6b1e", side: "#2d6b1e" }, { isTransparent: true }, 0, 12);
-def(BlockId.SAND, "Sand", { top: "#d4c484", bottom: "#d4c484", side: "#d4c484" }, { gravity: true }, 1, 0);
+def(BlockId.GRASS, "Grass", { top: "#4a8c2a", bottom: "#6b4226", side: "#6b8c3a" }, { hardness: 1 }, 0, 0);
+def(BlockId.DIRT, "Dirt", { top: "#6b4226", bottom: "#6b4226", side: "#6b4226" }, { hardness: 1 }, 0, 3);
+def(BlockId.STONE, "Stone", { top: "#7a7a7a", bottom: "#7a7a7a", side: "#7a7a7a" }, { hardness: 4 }, 0, 6);
+def(BlockId.WOOD, "Wood", { top: "#8b7242", bottom: "#8b7242", side: "#5c4020" }, { hardness: 3 }, 0, 9);
+def(BlockId.LEAVES, "Leaves", { top: "#2d6b1e", bottom: "#2d6b1e", side: "#2d6b1e" }, { isTransparent: true, hardness: 1 }, 0, 12);
+def(BlockId.SAND, "Sand", { top: "#d4c484", bottom: "#d4c484", side: "#d4c484" }, { gravity: true, hardness: 1 }, 1, 0);
 def(BlockId.WATER, "Water", { top: "#3060c0", bottom: "#3060c0", side: "#3060c0" }, { isSolid: false, isTransparent: true }, 1, 3);
-def(BlockId.BEDROCK, "Bedrock", { top: "#3a3a3a", bottom: "#3a3a3a", side: "#3a3a3a" }, {}, 1, 6);
+def(BlockId.BEDROCK, "Bedrock", { top: "#3a3a3a", bottom: "#3a3a3a", side: "#3a3a3a" }, { hardness: 999 }, 1, 6);
 def(BlockId.LAVA, "Lava", { top: "#ff4400", bottom: "#cc2200", side: "#ee3300" }, { isSolid: false, isTransparent: true, emitsLight: true }, 1, 9);
 def(BlockId.TORCH, "Torch", { top: "#ffdd44", bottom: "#6b4226", side: "#6b4226" }, { isTransparent: true, emitsLight: true }, 1, 12);
 def(BlockId.TNT, "TNT", { top: "#cc3333", bottom: "#cc3333", side: "#dd4444" }, {}, 2, 0);
@@ -103,6 +105,10 @@ export function isSolid(id: BlockId): boolean {
 export function isTransparent(id: BlockId): boolean {
   if (id === BlockId.AIR) return true;
   return BLOCK_DEFS.get(id)?.isTransparent ?? false;
+}
+
+export function getHardness(id: BlockId): number {
+  return BLOCK_DEFS.get(id)?.hardness ?? 1;
 }
 
 export function hasGravity(id: BlockId): boolean {

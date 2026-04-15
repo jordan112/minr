@@ -104,8 +104,22 @@ export function propagateAll(world: World): void {
           poweredSet.add(nk);
         }
       }
+
+      // TNT gets queued for detonation
+      if (block === BlockId.TNT) {
+        pendingTNT.push([nx, ny, nz]);
+      }
     }
   }
+}
+
+// TNT blocks that should explode (set by propagation, consumed by main.ts)
+const pendingTNT: [number, number, number][] = [];
+
+export function consumePendingTNT(): [number, number, number][] {
+  const result = [...pendingTNT];
+  pendingTNT.length = 0;
+  return result;
 }
 
 /** Call when a redstone block is placed or removed to re-propagate */

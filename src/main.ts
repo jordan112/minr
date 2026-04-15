@@ -24,9 +24,9 @@ import { MountainGoat } from "./entities/MountainGoat";
 import { LootPopup, rollLoot } from "./ui/LootPopup";
 import { Boat } from "./entities/Boat";
 import { SaveManager } from "./save/SaveManager";
-import { toggleLever, propagatePower, isPowered, getPoweredLamps } from "./world/RedstoneSystem";
+import { toggleLever, propagatePower, isPowered, getPoweredLamps, consumePendingTNT } from "./world/RedstoneSystem";
 import { updatePhysics, checkGravityAt, registerFire, spreadWater } from "./world/PhysicsSystem";
-import { hasGravity } from "./world/BlockType";
+import { hasGravity, getHardness } from "./world/BlockType";
 
 // --- Init ---
 const canvas = document.getElementById("game") as HTMLCanvasElement;
@@ -389,6 +389,9 @@ function spawnVillagerAt() {
 // --- Game Loop ---
 let lastTime = performance.now();
 let placeCooldown = 0;
+
+// Block damage tracking — multi-hit breaking
+let breakingBlock: { x: number; y: number; z: number; hits: number } | null = null;
 
 function gameLoop(now: number) {
   requestAnimationFrame(gameLoop);
@@ -787,15 +790,29 @@ function gameLoop(now: number) {
           }
         } else {
           const brokenBlock = world.getBlock(bx, by, bz);
-          spawnBreakParticles(bx, by, bz);
-          world.setBlock(bx, by, bz, BlockId.AIR);
-          // Re-propagate redstone if a circuit block was broken
-          if (brokenBlock === BlockId.WIRE || brokenBlock === BlockId.LAMP || brokenBlock === BlockId.DOOR) {
-            propagatePower(world, bx, by, bz);
+          const hardness = getHardness(brokenBlock);
+          const toolDef2 = getToolDef(currentTool);
+
+          // Track multi-hit breaking
+          if (!breakingBlock || breakingBlock.x !== bx || breakingBlock.y !== by || breakingBlock.z !== bz) {
+            breakingBlock = { x: bx, y: by, z: bz, hits: 0 };
           }
-          // Check if blocks above should fall (gravity)
-          for (let gy = by + 1; gy < by + 10; gy++) {
-            checkGravityAt(world, bx, gy, bz);
+          breakingBlock.hits += toolDef2.breakSpeed;
+
+          if (breakingBlock.hits >= hardness) {
+            // Block breaks!
+            spawnBreakParticles(bx, by, bz);
+            world.setBlock(bx, by, bz, BlockId.AIR);
+            breakingBlock = null;
+            if (brokenBlock === BlockId.WIRE || brokenBlock === BlockId.LAMP || brokenBlock === BlockId.DOOR) {
+              propagatePower(world, bx, by, bz);
+            }
+            for (let gy = by + 1; gy < by + 10; gy++) {
+              checkGravityAt(world, bx, gy, bz);
+            }
+          } else {
+            // Show crack progress (shrink the highlight)
+            sound.playBlockBreak();
           }
         }
         controller.playerModel.triggerSwing();
@@ -1067,6 +1084,28 @@ function gameLoop(now: number) {
       light.position.set(lx + 0.5, ly + 0.5, lz + 0.5);
       light.userData.isLampLight = true;
       sceneManager.scene.add(light);
+    }
+  }
+
+  // Redstone-triggered TNT detonation
+  const tntToDetonate = consumePendingTNT();
+  for (const [tx, ty, tz] of tntToDetonate) {
+    if (world.getBlock(tx, ty, tz) === BlockId.TNT) {
+      sound.playExplosion();
+      const radius = 4;
+      for (let dx = -radius; dx <= radius; dx++) {
+        for (let dy = -radius; dy <= radius; dy++) {
+          for (let dz = -radius; dz <= radius; dz++) {
+            if (dx*dx + dy*dy + dz*dz <= radius*radius) {
+              const b = world.getBlock(tx+dx, ty+dy, tz+dz);
+              if (b !== BlockId.BEDROCK) {
+                world.setBlock(tx+dx, ty+dy, tz+dz, BlockId.AIR);
+              }
+            }
+          }
+        }
+      }
+      spawnBreakParticles(tx, ty, tz);
     }
   }
 
