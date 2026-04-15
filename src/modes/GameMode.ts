@@ -30,7 +30,7 @@ export function createGameState(type: GameModeType): GameModeState {
     bedHealth: 20,
     maxBedHealth: 20,
     bedPos: null,
-    waveTimer: 10,
+    waveTimer: 60, // 60 seconds before first wave
     betweenWaves: true,
     score: 0,
     gameOver: false,

@@ -170,7 +170,7 @@ hud.onModeSelect = (mode) => {
     }
     gameMode.bedPos = [bedX, bedY, bedZ];
     // Place the bed block and mark it with a glowing beacon
-    world.setBlock(bedX, bedY, bedZ, BlockId.LAMP); // glowing block = the bed
+    world.setBlock(bedX, bedY, bedZ, BlockId.BED); // actual bed block
     // Build small walls around it for initial defense
     for (const [dx, dz] of [[1,0],[-1,0],[0,1],[0,-1]] as [number,number][]) {
       world.setBlock(bedX + dx, bedY, bedZ + dz, BlockId.WOOD);
@@ -375,7 +375,7 @@ document.addEventListener("keydown", (e) => {
         if (isSolid(world.getBlock(bedX, y, bedZ))) { bedY = y + 1; break; }
       }
       gameMode.bedPos = [bedX, bedY, bedZ];
-      world.setBlock(bedX, bedY, bedZ, BlockId.LAMP);
+      world.setBlock(bedX, bedY, bedZ, BlockId.BED);
       player.health = player.maxHealth;
       dayTime = 0.65;
       loot.show("BEDWARS RESTARTED!", "#44ff44");
@@ -1251,7 +1251,7 @@ function gameLoop(now: number) {
       if (gameMode.enemiesRemaining <= 0) {
         // Wave complete!
         gameMode.betweenWaves = true;
-        gameMode.waveTimer = 15; // 15 seconds between waves
+        gameMode.waveTimer = 45; // 45 seconds between waves to build defenses
         gameMode.score += gameMode.wave * 100;
         loot.show(`Wave ${gameMode.wave} complete! +${gameMode.wave * 100} points`, "#44ff44");
         // Heal player between waves

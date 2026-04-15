@@ -32,6 +32,7 @@ export class TextureManager {
       BlockId.GRAVEL, BlockId.FIRE, BlockId.GLASS,
       BlockId.FLOWER_RED, BlockId.FLOWER_BLUE,
       BlockId.FRUIT_RED, BlockId.FRUIT_ORANGE,
+      BlockId.BED,
     ]) {
       const def = getBlockDef(blockId);
       if (!def) continue;
@@ -311,6 +312,57 @@ export class TextureManager {
       // Shine
       ctx.fillStyle = "rgba(255,255,255,0.3)";
       ctx.fillRect(x + 2, y + 2, 4, 4);
+    }
+
+    // BED — red blanket on top, wood frame on sides
+    if (blockId === BlockId.BED) {
+      if (face === "top") {
+        // Red blanket with pillow
+        ctx.fillStyle = "#cc2222";
+        ctx.fillRect(x, y, size, size);
+        // Blanket folds
+        ctx.fillStyle = "#aa1818";
+        ctx.fillRect(x, y + 4, size, 1);
+        ctx.fillRect(x, y + 8, size, 1);
+        ctx.fillRect(x, y + 12, size, 1);
+        // White pillow at top
+        ctx.fillStyle = "#eeeeee";
+        ctx.fillRect(x + 2, y + 1, 12, 3);
+        ctx.fillStyle = "#dddddd";
+        ctx.fillRect(x + 3, y + 2, 10, 1);
+        // Border
+        ctx.fillStyle = "#6b4226";
+        ctx.fillRect(x, y, size, 1);
+        ctx.fillRect(x, y + size - 1, size, 1);
+        ctx.fillRect(x, y, 1, size);
+        ctx.fillRect(x + size - 1, y, 1, size);
+      } else if (face === "side") {
+        // Wood frame with red blanket visible
+        ctx.fillStyle = "#6b4226";
+        ctx.fillRect(x, y, size, size);
+        // Wood grain
+        for (let px2 = 0; px2 < size; px2 += 4) {
+          ctx.fillStyle = "rgba(0,0,0,0.1)";
+          ctx.fillRect(x + px2, y, 1, size);
+        }
+        // Red blanket visible in upper portion
+        ctx.fillStyle = "#cc2222";
+        ctx.fillRect(x + 1, y + 1, size - 2, 6);
+        ctx.fillStyle = "#aa1818";
+        ctx.fillRect(x + 1, y + 4, size - 2, 1);
+        // Legs
+        ctx.fillStyle = "#5a3a15";
+        ctx.fillRect(x, y + size - 3, 2, 3);
+        ctx.fillRect(x + size - 2, y + size - 3, 2, 3);
+      } else {
+        // Bottom — wood
+        ctx.fillStyle = "#5a3a15";
+        ctx.fillRect(x, y, size, size);
+        for (let py2 = 0; py2 < size; py2 += 3) {
+          ctx.fillStyle = "rgba(0,0,0,0.1)";
+          ctx.fillRect(x, y + py2, size, 1);
+        }
+      }
     }
   }
 
