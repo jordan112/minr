@@ -3,7 +3,8 @@ import { Player } from "./Player";
 import { PlayerModel } from "./PlayerModel";
 import { InputManager } from "../input/InputManager";
 import { World } from "../world/World";
-import { isSolid } from "../world/BlockType";
+import { isSolid, BlockId } from "../world/BlockType";
+import { isPowered } from "../world/RedstoneSystem";
 import { ToolType } from "./ToolSystem";
 import {
   GRAVITY, JUMP_VELOCITY, PLAYER_HEIGHT, PLAYER_WIDTH,
@@ -261,7 +262,10 @@ export class PlayerController {
     for (let bx = minX; bx <= maxX; bx++) {
       for (let by = minY; by <= maxY; by++) {
         for (let bz = minZ; bz <= maxZ; bz++) {
-          if (isSolid(this.world.getBlock(bx, by, bz))) {
+          const block = this.world.getBlock(bx, by, bz);
+          if (isSolid(block)) {
+            // Powered doors are passable
+            if (block === BlockId.DOOR && isPowered(bx, by, bz)) continue;
             return true;
           }
         }

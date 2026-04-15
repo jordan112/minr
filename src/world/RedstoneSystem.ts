@@ -1,35 +1,37 @@
-import { BlockId, getBlockDef } from "./BlockType";
-import { World } from "./World";
+import { BlockId } from "./BlockType";
+import type { World } from "./World";
 
 /**
- * Redstone-lite: simple power propagation system.
+ * Redstone-lite logic system.
  *
- * Components:
- * - LEVER: toggleable power source (power 15 when ON)
- * - WIRE: carries power, decreases by 1 per block
- * - LAMP: glows when receiving power > 0
- * - DOOR: becomes passable when receiving power > 0
+ * How to use:
+ * 1. Place a LEVER (power source)
+ * 2. Place WIRE blocks to carry the signal (up to 15 blocks)
+ * 3. Connect to LAMP (lights up) or DOOR (becomes passable)
+ * 4. Left-click the LEVER to toggle power ON/OFF
  *
- * Power propagates through adjacent wire blocks (6 directions).
- * Levers toggle on right-click/B/E.
+ * Power rules:
+ * - Lever ON = emits power 15
+ * - Wire carries power, loses 1 per block
+ * - Lamp glows when power > 0
+ * - Door becomes non-solid when power > 0
+ * - Power propagates through all 6 directions (up/down/left/right/front/back)
  */
 
-// Track lever states and power levels
-const leverStates = new Map<string, boolean>(); // "x,y,z" -> on/off
-const powerLevels = new Map<string, number>();   // "x,y,z" -> power level 0-15
-
-// Track powered lamp/door states for rendering
-const poweredBlocks = new Set<string>();
+const leverStates = new Map<string, boolean>();
+const powerLevels = new Map<string, number>();
+const poweredSet = new Set<string>();
 
 function key(x: number, y: number, z: number): string {
   return `${x},${y},${z}`;
 }
 
-export function toggleLever(world: World, x: number, y: number, z: number): void {
+export function toggleLever(world: World, x: number, y: number, z: number): boolean {
   const k = key(x, y, z);
-  const wasOn = leverStates.get(k) ?? false;
-  leverStates.set(k, !wasOn);
-  propagatePower(world, x, y, z);
+  const newState = !(leverStates.get(k) ?? false);
+  leverStates.set(k, newState);
+  propagateAll(world);
+  return newState;
 }
 
 export function isLeverOn(x: number, y: number, z: number): boolean {
@@ -37,83 +39,89 @@ export function isLeverOn(x: number, y: number, z: number): boolean {
 }
 
 export function isPowered(x: number, y: number, z: number): boolean {
-  return poweredBlocks.has(key(x, y, z));
+  return poweredSet.has(key(x, y, z));
 }
 
 export function getPowerLevel(x: number, y: number, z: number): number {
   return powerLevels.get(key(x, y, z)) ?? 0;
 }
 
+/** Check if a door is currently open (powered) */
+export function isDoorOpen(x: number, y: number, z: number): boolean {
+  return isPowered(x, y, z);
+}
+
 const DIRS: [number, number, number][] = [
-  [1, 0, 0], [-1, 0, 0],
-  [0, 1, 0], [0, -1, 0],
-  [0, 0, 1], [0, 0, -1],
+  [1,0,0], [-1,0,0], [0,1,0], [0,-1,0], [0,0,1], [0,0,-1],
 ];
 
-export function propagatePower(world: World, sourceX: number, sourceY: number, sourceZ: number): void {
-  // Clear old power levels
+/** Full re-propagation from all known levers */
+export function propagateAll(world: World): void {
   powerLevels.clear();
-  poweredBlocks.clear();
+  poweredSet.clear();
 
-  // Find all levers that are ON and start BFS from each
-  // We need to scan loaded chunks for levers — but for efficiency,
-  // just re-propagate from all known levers
-  const sources: [number, number, number, number][] = []; // x,y,z,power
+  // Collect all active power sources
+  const queue: [number, number, number, number][] = [];
 
   for (const [k, isOn] of leverStates) {
     if (!isOn) continue;
-    const [sx, sy, sz] = k.split(",").map(Number) as [number, number, number];
-    sources.push([sx, sy, sz, 15]);
+    const parts = k.split(",");
+    const sx = Number(parts[0]);
+    const sy = Number(parts[1]);
+    const sz = Number(parts[2]);
+    powerLevels.set(k, 15);
+    poweredSet.add(k);
+    queue.push([sx, sy, sz, 15]);
   }
 
-  // BFS propagation
-  const queue = [...sources];
-  for (const [sx, sy, sz, power] of sources) {
-    powerLevels.set(key(sx, sy, sz), power);
-  }
-
+  // BFS power propagation
   while (queue.length > 0) {
-    const [cx, cy, cz, cPower] = queue.shift()!;
+    const [cx, cy, cz, power] = queue.shift()!;
 
     for (const [dx, dy, dz] of DIRS) {
       const nx = cx + dx;
       const ny = cy + dy;
       const nz = cz + dz;
       const nk = key(nx, ny, nz);
-
-      const block = world.getBlock(nx, ny, nz);
-      const newPower = cPower - 1;
-
+      const newPower = power - 1;
       if (newPower <= 0) continue;
 
-      // Wire carries power
+      const block = world.getBlock(nx, ny, nz);
+
+      // Wire propagates power
       if (block === BlockId.WIRE) {
-        const existing = powerLevels.get(nk) ?? 0;
-        if (newPower > existing) {
+        if (newPower > (powerLevels.get(nk) ?? 0)) {
           powerLevels.set(nk, newPower);
-          poweredBlocks.add(nk);
+          poweredSet.add(nk);
           queue.push([nx, ny, nz, newPower]);
         }
       }
 
-      // Lamp and Door receive power (don't propagate further)
+      // Lamp and Door receive power but don't propagate
       if (block === BlockId.LAMP || block === BlockId.DOOR) {
-        const existing = powerLevels.get(nk) ?? 0;
-        if (newPower > existing) {
+        if (newPower > (powerLevels.get(nk) ?? 0)) {
           powerLevels.set(nk, newPower);
-          poweredBlocks.add(nk);
+          poweredSet.add(nk);
         }
       }
     }
   }
 }
 
+/** Call when a redstone block is placed or removed to re-propagate */
+export function propagatePower(world: World, _x: number, _y: number, _z: number): void {
+  propagateAll(world);
+}
+
 /**
- * Update redstone visuals — call each frame.
- * Changes wire color based on power, toggles lamp glow, door passability.
+ * Visual update — returns list of powered lamps for lighting.
+ * Can be used to add point lights at powered lamp positions.
  */
-export function updateRedstoneVisuals(world: World): void {
-  // This is handled by the rendering system checking isPowered()
-  // The mesher could use power levels to tint wire blocks,
-  // but for simplicity we'll use point lights for powered lamps
+export function getPoweredLamps(): [number, number, number][] {
+  const lamps: [number, number, number][] = [];
+  for (const k of poweredSet) {
+    const parts = k.split(",");
+    lamps.push([Number(parts[0]), Number(parts[1]), Number(parts[2])]);
+  }
+  return lamps;
 }

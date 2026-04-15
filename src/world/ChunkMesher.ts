@@ -57,20 +57,22 @@ export function buildChunkMesh(
         const isCross = blockId === BlockId.FLOWER_RED || blockId === BlockId.FLOWER_BLUE || blockId === BlockId.FIRE;
         const target = isLiquid ? water : solid;
 
-        // Cross-shaped billboard for flowers/fire (two diagonal planes)
+        // Cross-shaped billboard for flowers/fire (two diagonal planes like Minecraft)
         if (isCross) {
           const [u0, v0, u1, v1] = textureManager.getUVs(blockId, "side");
-          // Two diagonal planes forming an X
-          const crossVerts: [number,number,number][][] = [
-            [[0,0,0],[0,1,0],[1,1,1],[1,0,1]], // diagonal 1
-            [[1,0,0],[1,1,0],[0,1,1],[0,0,1]], // diagonal 2
-            [[1,0,1],[1,1,1],[0,1,0],[0,0,0]], // diagonal 1 back
-            [[0,0,1],[0,1,1],[1,1,0],[1,0,0]], // diagonal 2 back
+          // Inset slightly so they don't z-fight with adjacent blocks
+          const m = 0.15; // margin from block edge
+          // Two diagonal planes forming an X, each rendered double-sided
+          const crossPlanes: { verts: [number,number,number][]; nx: number; ny: number; nz: number }[] = [
+            { verts: [[m,0,m],[m,1,m],[1-m,1,1-m],[1-m,0,1-m]], nx: -0.7, ny: 0.3, nz: 0.7 },
+            { verts: [[1-m,0,1-m],[1-m,1,1-m],[m,1,m],[m,0,m]], nx: 0.7, ny: 0.3, nz: -0.7 },
+            { verts: [[1-m,0,m],[1-m,1,m],[m,1,1-m],[m,0,1-m]], nx: 0.7, ny: 0.3, nz: 0.7 },
+            { verts: [[m,0,1-m],[m,1,1-m],[1-m,1,m],[1-m,0,m]], nx: -0.7, ny: 0.3, nz: -0.7 },
           ];
-          for (const verts of crossVerts) {
-            for (const [vx, vy, vz] of verts) {
+          for (const plane of crossPlanes) {
+            for (const [vx, vy, vz] of plane.verts) {
               target.positions.push(x + vx, y + vy, z + vz);
-              target.normals.push(0, 0, 1);
+              target.normals.push(plane.nx, plane.ny, plane.nz);
             }
             target.uvs.push(u0, v0, u0, v1, u1, v1, u1, v0);
             target.indices.push(

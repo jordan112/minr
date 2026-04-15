@@ -24,7 +24,7 @@ import { MountainGoat } from "./entities/MountainGoat";
 import { LootPopup, rollLoot } from "./ui/LootPopup";
 import { Boat } from "./entities/Boat";
 import { SaveManager } from "./save/SaveManager";
-import { toggleLever, propagatePower, isPowered } from "./world/RedstoneSystem";
+import { toggleLever, propagatePower, isPowered, getPoweredLamps } from "./world/RedstoneSystem";
 import { updatePhysics, checkGravityAt, registerFire, spreadWater } from "./world/PhysicsSystem";
 import { hasGravity } from "./world/BlockType";
 
@@ -117,7 +117,7 @@ setTimeout(spawnVillagers, 1000);
 const zombies: Zombie[] = [];
 let zombieSpawnTimer = 5;
 let dayTime = 0.25; // start at sunrise
-const DAY_LENGTH = 120;
+const DAY_LENGTH = 1200; // 20 minutes full cycle (Minecraft standard)
 let isPaused = false;
 let playerAir = 10;
 let airTimer = 0;
@@ -1019,6 +1019,26 @@ function gameLoop(now: number) {
       if (dx * dx + dz * dz < 40 * 40) {
         sound.playWhaleBlow();
       }
+    }
+  }
+
+  // Redstone: update lamp lights
+  // Remove old lamp lights
+  for (let i = sceneManager.scene.children.length - 1; i >= 0; i--) {
+    const child = sceneManager.scene.children[i];
+    if (child && child.userData.isLampLight) {
+      sceneManager.scene.remove(child);
+    }
+  }
+  // Add point lights at powered lamps
+  const poweredLamps = getPoweredLamps();
+  for (const [lx, ly, lz] of poweredLamps) {
+    const block = world.getBlock(lx, ly, lz);
+    if (block === BlockId.LAMP) {
+      const light = new THREE.PointLight(0xffffaa, 1.5, 12);
+      light.position.set(lx + 0.5, ly + 0.5, lz + 0.5);
+      light.userData.isLampLight = true;
+      sceneManager.scene.add(light);
     }
   }
 
