@@ -460,7 +460,7 @@ export class HUD {
         <b style="color:#ffaa33">SPAWN:</b> G to spawn creatures<br>
         <b>HEAL:</b> Stay safe 3s to auto-regen &nbsp; <b>PAUSE:</b> P<br>
         <b>SAVE:</b> Ctrl+S (autosaves every 30s) &nbsp; <b>LOAD:</b> L<br>
-        <b style="color:#aaffff">MODE:</b> J to toggle Creative/Survival (fly, no damage, instant break)<br>
+        <b style="color:#aaffff">MODE:</b> J = Creative/Survival &nbsp; <b style="color:#44ffaa">MULTI:</b> N = Multiplayer<br>
         <b>RESET:</b> R &nbsp; <b>MUSIC:</b> M &nbsp; <b>DEBUG:</b> F3
       </div>
       <div style="font-size:12px;opacity:0.6;margin-top:12px;text-align:center;max-width:420px;line-height:1.8">

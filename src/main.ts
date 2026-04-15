@@ -27,6 +27,7 @@ import { SaveManager } from "./save/SaveManager";
 import { createGameState } from "./modes/GameMode";
 import type { GameModeType } from "./modes/GameMode";
 import { BedwarsHUD } from "./modes/BedwarsHUD";
+import { MultiplayerManager } from "./multiplayer/MultiplayerManager";
 import { toggleLever, propagatePower, isPowered, getPoweredLamps, consumePendingTNT } from "./world/RedstoneSystem";
 import { updatePhysics, checkGravityAt, registerFire, spreadWater } from "./world/PhysicsSystem";
 import { hasGravity, getHardness } from "./world/BlockType";
@@ -69,6 +70,7 @@ sceneManager.scene.add(ghostBlock);
 const saveManager = new SaveManager();
 const bedwarsHUD = new BedwarsHUD();
 let gameMode = createGameState("freeplay");
+const multiplayer = new MultiplayerManager(sceneManager.scene);
 
 // Break particle effect
 const breakParticles: {mesh: THREE.Mesh, vel: THREE.Vector3, life: number}[] = [];
@@ -276,6 +278,11 @@ document.addEventListener("keydown", (e) => {
   // Creative mode: double-tap space to fly up, shift to fly down
   if (e.code === "ShiftLeft" && player.isCreative) {
     player.position.y -= 0.5;
+  }
+
+  // N for multiplayer menu
+  if (e.code === "KeyN") {
+    multiplayer.showMenu();
   }
 
   // G to open spawn menu
@@ -1217,6 +1224,9 @@ function gameLoop(now: number) {
 
     bedwarsHUD.update(gameMode);
   }
+
+  // Multiplayer sync
+  multiplayer.update(dt, player.position.x, player.position.y, player.position.z, player.yaw, player.health, currentTool);
 
   // Autosave every 30s
   saveManager.updateAutosave(dt, player, world, dayTime);
